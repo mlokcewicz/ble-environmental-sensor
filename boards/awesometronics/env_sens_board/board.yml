@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 board:
-  name: custom_plank
-  vendor: vendor
+  name: env_sens_board
+  vendor: awesometronics
   socs:
     - name: nrf52832
   revision:

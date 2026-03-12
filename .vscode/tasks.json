@@ -19,7 +19,7 @@
                 "--sysbuild",
                 "--pristine",
                 "--cmake-only",
-                "-b", "custom_plank",
+                "-b", "env_sens_board",
                 "-d", "build/v1.0.0_debug",
                 "--",
                 "-DBOARD_REVISION=1.0.0",

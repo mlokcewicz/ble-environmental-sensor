@@ -1,9 +1,9 @@
 # Copyright (c) 2021 Nordic Semiconductor ASA
 # SPDX-License-Identifier: Apache-2.0
 
-identifier: custom_plank
-name: Custom-Plank
-vendor: vendor
+identifier: env_sens_board
+name: Environmental-Sensor-Board
+vendor: awesometronics
 type: mcu
 arch: arm
 ram: 64

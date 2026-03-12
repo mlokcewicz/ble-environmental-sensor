@@ -1,6 +1,6 @@
 / {
-	model = "Custom Plank Board";
-	compatible = "vendor,custom-plank";
+	model = "Environmental Sensor Board";
+	compatible = "awesometronics,env-sens-board";
 
     leds {
 		compatible = "gpio-leds";

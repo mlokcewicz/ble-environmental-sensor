@@ -15,11 +15,13 @@ BLE environmental sensor (temperature, humidity, pressure) based on Nordic Thing
 
 ## Build
 
+Application developed as a freestanding Zephyr application type.
+
 ### Generate ninja files
 
-Set: `ZEPHYR_SDK_INSTALL_DIR`, `ZEPHYR_BASE`, `Zephyr_DIR`
+Set: `ZEPHYR_SDK_INSTALL_DIR`and `ZEPHYR_BASE`
 
-`west build --sysbuild --pristine --cmake-only -b custom_plank -d build/build/<hw_version_<config> -- -DBOARD_REVISION=<hw_version> -DBOARD_ROOT=. -DCONF_FILE=prj.conf;prj_<config>.conf`                
+`west build --sysbuild --pristine --cmake-only -b env_sens_board -d build/build/<hw_version_<config> -- -DBOARD_REVISION=<hw_version> -DBOARD_ROOT=. -DCONF_FILE=prj.conf;prj_<config>.conf`                
 
 ### Build project
 `west build -d build/<hw_version_<config>`
