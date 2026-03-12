@@ -1,0 +1,101 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "ZEPHYR_SDK_INSTALL_DIR": "C:\\embedded_tools\\zephyr_sdk\\zephyr-sdk-0.17.4",
+            "ZEPHYR_BASE": "C:\\embedded_tools\\ncs\\v3.2.2\\zephyr",
+            // "APP_DIR": "${workspaceFolder}" // When CMake presets with sysbuild is available
+        },
+        "cwd": "${workspaceFolder}"
+        // Example:
+        // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
+        // "cwd": "D:\\Inne\\Links\\epn"
+    },
+    "tasks": [
+        {
+            "label": "configure",
+            "type": "process",
+            "command": "west",
+            "args": [
+                "build",
+                "--sysbuild",
+                "--pristine",
+                "--cmake-only",
+                "-b", "custom_plank",
+                "-d", "build/v0.0.1_debug",
+                "--",
+                "-DBOARD_REVISION=0.0.1",
+                "-DBOARD_ROOT=${cwd}",
+                "-DDCONF_FILE=prj.conf;prj_debug.conf"
+            ]
+        },
+        // {
+            // Alternative with CMake presets
+            // "label": "configure",
+            // "type": "process",
+            // "command": "west",
+            // "args": [
+            //     "build",
+            //     "--board=custom_plank",
+            //     "--sysbuild",
+            //     "--pristine",
+            //     "--cmake-only",
+            //     "-d", "build/v0.0.1_debug",
+            //     "--",
+            //     "--preset=v0.0.1_debug",
+            // ]
+        // },
+        {
+            "label": "build",
+            "type": "process",
+            "command": "west",
+            "args": [
+                "build",
+                "-d", "build/v0.0.1_debug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "type": "process",
+            "command": "west",
+            "args": [
+                "build",
+                "-d", "build/v0.0.1_debug",
+                "-t", "clean"
+            ]
+        },
+        {
+            "label": "flash",
+            "type": "process",
+            "command": "west",
+            "args": [
+                "flash",
+                "-d", "build/v0.0.1_debug",
+                "--runner", "jlink",
+                "--speed", "14000",
+                "--skip-rebuild"
+            ]
+            // Alternative 1 (plain west flash):
+            // "type": "process",
+            // "command": "west",
+            // "args": [
+            //     "flash"
+            // "-d", "build/v0.0.1_debug",
+            // ],
+        },
+        {
+            "label": "recover",
+            "type": "process",
+            "command": "nrfutil",
+            "args": [
+                "device", "recover"
+            ]
+        }
+    ]
+}

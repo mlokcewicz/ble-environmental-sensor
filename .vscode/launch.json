@@ -1,0 +1,76 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug",
+            // Example:
+            // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
+            "cwd": "${workspaceFolder}",
+            // "cwd": "D:\\Inne\\Links\\epn",
+            "executable": "build/v0.0.1_debug/epn/zephyr/zephyr.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "rtos": "Zephyr",
+            "runToEntryPoint": "main",
+            "servertype": "jlink",
+            "svdFile": "C:/embedded_tools/ncs/v3.2.0/modules/hal/nordic/nrfx/bsp/stable/mdk/nrf52.svd",
+            "device": "nRF52832_xxAA",
+            // "preLaunchTask": "flash",
+            "preLaunchCommands": [
+                "monitor reset",
+                "monitor halt"
+            ],
+            "rttConfig": {
+                "enabled": true,                 
+                "address": "auto",               
+                "search": true,                  
+                "polling_interval": 20,          
+                "console": "integratedTerminal", 
+                "decoders": [
+                    {
+                        "label": "RTT",          
+                        "port": 0,               
+                        "type": "console"        
+                    }
+                ]
+            }
+        },
+        {
+            "name": "attach",
+            // Example:
+            // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
+            "cwd": "${workspaceFolder}",
+            // "cwd": "D:\\Inne\\Links\\epn",
+            "executable": "build/v0.0.1_debug/epn/zephyr/zephyr.elf",
+            "request": "attach",
+            "type": "cortex-debug",
+            "rtos": "Zephyr",
+            "runToEntryPoint": "main",
+            "servertype": "jlink",
+            "svdFile": "C:/embedded_tools/ncs/v3.2.0/modules/hal/nordic/nrfx/bsp/stable/mdk/nrf52.svd",
+            "device": "nRF52832_xxAA",
+            "preLaunchTask": "flash",
+            "preAttachCommands": [
+                "monitor reset",
+                "monitor halt"
+            ],
+            "rttConfig": {
+                "enabled": true,                 
+                "address": "auto",               
+                "search": true,                  
+                "polling_interval": 20,          
+                "console": "integratedTerminal", 
+                "decoders": [
+                    {
+                        "label": "RTT",          
+                        "port": 0,               
+                        "type": "console"        
+                    }
+                ]
+            }
+        }
+    ]
+}
