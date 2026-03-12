@@ -1,4 +1,6 @@
-# embedded-project-name 
+# ble-environmental-sensor 
+
+BLE environmental sensor (temperature, humidity, pressure) based on Nordic Thingy52.
 
 ## Tools
 
@@ -18,8 +20,6 @@
 Set: `ZEPHYR_SDK_INSTALL_DIR`, `ZEPHYR_BASE`, `Zephyr_DIR`
 
 `west build --sysbuild --pristine --cmake-only -b custom_plank -d build/build/<hw_version_<config> -- -DBOARD_REVISION=<hw_version> -DBOARD_ROOT=. -DCONF_FILE=prj.conf;prj_<config>.conf`                
-`cmake --preset <hw_version>_<config>`
 
 ### Build project
 `west build -d build/<hw_version_<config>`
-`cmake --build --preset <hw_version>_<config>`

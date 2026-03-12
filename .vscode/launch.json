@@ -6,11 +6,8 @@
     "configurations": [
         {
             "name": "debug",
-            // Example:
-            // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
             "cwd": "${workspaceFolder}",
-            // "cwd": "D:\\Inne\\Links\\epn",
-            "executable": "build/v0.0.1_debug/epn/zephyr/zephyr.elf",
+            "executable": "build/v0.0.1_debug/bes/zephyr/zephyr.elf",
             "request": "launch",
             "type": "cortex-debug",
             "rtos": "Zephyr",
@@ -40,11 +37,8 @@
         },
         {
             "name": "attach",
-            // Example:
-            // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
             "cwd": "${workspaceFolder}",
-            // "cwd": "D:\\Inne\\Links\\epn",
-            "executable": "build/v0.0.1_debug/epn/zephyr/zephyr.elf",
+            "executable": "build/v0.0.1_debug/bes/zephyr/zephyr.elf",
             "request": "attach",
             "type": "cortex-debug",
             "rtos": "Zephyr",

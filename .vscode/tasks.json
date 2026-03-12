@@ -6,12 +6,8 @@
         "env": {
             "ZEPHYR_SDK_INSTALL_DIR": "C:\\embedded_tools\\zephyr_sdk\\zephyr-sdk-0.17.4",
             "ZEPHYR_BASE": "C:\\embedded_tools\\ncs\\v3.2.2\\zephyr",
-            // "APP_DIR": "${workspaceFolder}" // When CMake presets with sysbuild is available
         },
         "cwd": "${workspaceFolder}"
-        // Example:
-        // D:\Inne\Links>mklink /D epn D:\Elektronika\Repozytoria\GitHub\firmware\firmware-core\templates\nrf52\embedded-project-name
-        // "cwd": "D:\\Inne\\Links\\epn"
     },
     "tasks": [
         {
@@ -24,36 +20,20 @@
                 "--pristine",
                 "--cmake-only",
                 "-b", "custom_plank",
-                "-d", "build/v0.0.1_debug",
+                "-d", "build/v1.0.0_debug",
                 "--",
-                "-DBOARD_REVISION=0.0.1",
+                "-DBOARD_REVISION=1.0.0",
                 "-DBOARD_ROOT=${cwd}",
                 "-DDCONF_FILE=prj.conf;prj_debug.conf"
             ]
         },
-        // {
-            // Alternative with CMake presets
-            // "label": "configure",
-            // "type": "process",
-            // "command": "west",
-            // "args": [
-            //     "build",
-            //     "--board=custom_plank",
-            //     "--sysbuild",
-            //     "--pristine",
-            //     "--cmake-only",
-            //     "-d", "build/v0.0.1_debug",
-            //     "--",
-            //     "--preset=v0.0.1_debug",
-            // ]
-        // },
         {
             "label": "build",
             "type": "process",
             "command": "west",
             "args": [
                 "build",
-                "-d", "build/v0.0.1_debug"
+                "-d", "build/v1.0.0_debug"
             ],
             "group": {
                 "kind": "build",
@@ -66,7 +46,7 @@
             "command": "west",
             "args": [
                 "build",
-                "-d", "build/v0.0.1_debug",
+                "-d", "build/v1.0.0_debug",
                 "-t", "clean"
             ]
         },
@@ -76,18 +56,11 @@
             "command": "west",
             "args": [
                 "flash",
-                "-d", "build/v0.0.1_debug",
+                "-d", "build/v1.0.0_debug",
                 "--runner", "jlink",
                 "--speed", "14000",
                 "--skip-rebuild"
             ]
-            // Alternative 1 (plain west flash):
-            // "type": "process",
-            // "command": "west",
-            // "args": [
-            //     "flash"
-            // "-d", "build/v0.0.1_debug",
-            // ],
         },
         {
             "label": "recover",

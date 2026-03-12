@@ -8,7 +8,7 @@ board:
     - name: nrf52832
   revision:
     format: major.minor.patch
-    default: 0.0.1
+    default: 1.0.0
     exact: true
     revisions:
-    - name: 0.0.1
+    - name: 1.0.0
