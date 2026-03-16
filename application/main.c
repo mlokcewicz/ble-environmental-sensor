@@ -154,7 +154,7 @@ int main(void)
 		return ret;
 	}
 
-	// ret = device_is_ready(bme280_dev);
+	// ret = device_is_ready(bme280_dev);rj.
 	// if (!ret)
 	// {
 	// 	LOG_INF("Error: SPI device is not ready, err: %d", ret);
