@@ -50,12 +50,16 @@ const struct device *blink = DEVICE_DT_GET(DT_NODELABEL(blink_led));
 
 void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
-	LOG_WRN("Button pressed");
+	bool pressed = gpio_pin_get_dt(&sw0);
+	ble_manager_notify_button_pressed(pressed);
 
-	LOG_INF("Setting LED period to %u ms\n", BLINK_PERIOD_MS_MAX);
-	blink_set_period_ms(blink, 100);
+	if (pressed)
+	{
+		LOG_WRN("Button pressed");
 
-	ble_manager_notify_button_pressed();
+		LOG_INF("Setting LED period to %u ms\n", BLINK_PERIOD_MS_MAX);
+		blink_set_period_ms(blink, 100);
+	}
 }
 
 static void uart_cb(const struct device *dev, struct uart_event *evt, void *user_data)
@@ -111,7 +115,7 @@ int main(void)
 	if (ret < 0)
 		return ret;
 
-	ret = gpio_pin_interrupt_configure_dt(&sw0, GPIO_INT_EDGE_TO_ACTIVE);
+	ret = gpio_pin_interrupt_configure_dt(&sw0, GPIO_INT_EDGE_BOTH);
 	if (ret < 0)
 		return ret;
 

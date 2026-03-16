@@ -15,6 +15,8 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
 
+#include <bluetooth/services/lbs.h>
+
 //------------------------------------------------------------------------------
 
 #define DEVICE_NAME "Env_Sensor"
@@ -182,14 +184,21 @@ int ble_manager_init(ble_manager_connection_state_cb connection_state_cb)
     return 0;
 }
 
-int ble_manager_notify_button_pressed(void)
+int ble_manager_notify_button_pressed(bool button_pressed)
 {
-    int ret = k_work_submit(&update_adv_data_work);
-    if (ret < 0) 
+    int ret = bt_lbs_send_button_state(button_pressed);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to send button state notification (err %d)", ret);
+        // return ret;
+    }
+
+    ret = k_work_submit(&update_adv_data_work);
+    if (ret < 0)
     {
         LOG_ERR("Failed to submit work for updating advertising data (err %d)", ret);
     }
-    
+
     return ret;
 }
 
