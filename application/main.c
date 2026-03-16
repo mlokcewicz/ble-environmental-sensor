@@ -15,6 +15,8 @@
 
 #include <blink.h>
 
+#include "ble_manager.h"
+
 //------------------------------------------------------------------------------
 
 LOG_MODULE_REGISTER(main);
@@ -27,11 +29,13 @@ LOG_MODULE_REGISTER(main);
 #define BLINK_PERIOD_MS_MAX  1000U
 
 #define LED0_NODE DT_ALIAS(led0)
+#define LED2_NODE DT_ALIAS(led2)
 #define SW0_NODE DT_ALIAS(sw0)
 
 //------------------------------------------------------------------------------
 
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
 static const struct gpio_dt_spec sw0 = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
 
 static struct gpio_callback pin_cb_data;
@@ -50,6 +54,8 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 
 	LOG_INF("Setting LED period to %u ms\n", BLINK_PERIOD_MS_MAX);
 	blink_set_period_ms(blink, 100);
+
+	ble_manager_notify_button_pressed();
 }
 
 static void uart_cb(const struct device *dev, struct uart_event *evt, void *user_data)
@@ -71,6 +77,11 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 	}
 }
 
+static void ble_connection_state_cb(bool connected)
+{
+	gpio_pin_set_dt(&led2, connected);
+}
+
 //------------------------------------------------------------------------------
 
 int main(void)
@@ -82,7 +93,14 @@ int main(void)
 	if (!device_is_ready(led0.port))
 		return -1;
 
-	ret = gpio_pin_configure_dt(&led0, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&led0, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0)
+		return ret;
+
+	if (!device_is_ready(led2.port))
+		return -1;
+
+	ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
 	if (ret < 0)
 		return ret;
 
@@ -103,20 +121,20 @@ int main(void)
 	if (ret < 0)
 		return ret;
 
-	if (!device_is_ready(uart))
-		return -1;
+	// if (!device_is_ready(uart))
+	// 	return -1;
 
-	ret = uart_callback_set(uart, uart_cb, NULL);
-	if (ret < 0)
-		return ret;
+	// ret = uart_callback_set(uart, uart_cb, NULL);
+	// if (ret < 0)
+	// 	return ret;
 
-	ret = uart_tx(uart, "Press 1 or 2 to toggle LEDs\r\n", 30, SYS_FOREVER_US);
-	if (ret < 0)
-		return ret;
+	// ret = uart_tx(uart, "Press 1 or 2 to toggle LEDs\r\n", 30, SYS_FOREVER_US);
+	// if (ret < 0)
+	// 	return ret;
 
-	ret = uart_rx_enable(uart, rx_buf, sizeof(rx_buf), UART_RECEIVE_TIMEOUT);
-	if (ret < 0)
-		return ret;
+	// ret = uart_rx_enable(uart, rx_buf, sizeof(rx_buf), UART_RECEIVE_TIMEOUT);
+	// if (ret < 0)
+	// 	return ret;
 
 	ret = device_is_ready(blink);
 	if (!ret)
@@ -138,6 +156,13 @@ int main(void)
 	// 	LOG_INF("Error: SPI device is not ready, err: %d", ret);
 	// 	return ret;
 	// }
+
+	ret = ble_manager_init(ble_connection_state_cb);
+	if (ret < 0)
+	{
+		LOG_ERR("Bluetooth initialization failed (err %d)", ret);
+		return ret;
+	}
 
 	while (1)
 	{
