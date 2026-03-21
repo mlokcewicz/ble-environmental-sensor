@@ -28,14 +28,16 @@ LOG_MODULE_REGISTER(main);
 
 #define BLINK_PERIOD_MS_MAX  1000U
 
-#define LED0_NODE DT_ALIAS(led0)
-#define LED2_NODE DT_ALIAS(led2)
+#define LED0_NODE DT_ALIAS(led0) // Blink in while loop
+#define LED2_NODE DT_ALIAS(led2) // Indicates Bluetooth connection state (on when connected, off when disconnected)
+#define LED3_NODE DT_ALIAS(led3) // Used by LBS service
 #define SW0_NODE DT_ALIAS(sw0)
 
 //------------------------------------------------------------------------------
 
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
+static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 static const struct gpio_dt_spec sw0 = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
 
 static struct gpio_callback pin_cb_data;
@@ -46,12 +48,14 @@ static uint8_t rx_buf[UART_RECEIVE_BUFF_SIZE];
 const struct device *bme280_dev = DEVICE_DT_GET(DT_NODELABEL(bme280));
 const struct device *blink = DEVICE_DT_GET(DT_NODELABEL(blink_led));
 
+static bool button_state = false;
+
 //------------------------------------------------------------------------------
 
 void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	bool pressed = gpio_pin_get_dt(&sw0);
-	ble_manager_notify_button_pressed(pressed);
+	button_state = pressed;
 
 	if (pressed)
 	{
@@ -86,6 +90,16 @@ static void ble_connection_state_cb(bool connected)
 	gpio_pin_set_dt(&led2, connected);
 }
 
+static bool app_button_cb(void)
+{
+	return button_state;
+}
+
+static void app_led_cb(const bool led_state)
+{
+	gpio_pin_set_dt(&led3, led_state);
+}
+
 //------------------------------------------------------------------------------
 
 int main(void)
@@ -105,6 +119,13 @@ int main(void)
 		return -1;
 
 	ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0)
+		return ret;
+
+	if (!device_is_ready(led3.port))
+			return -1;
+
+	ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
 	if (ret < 0)
 		return ret;
 
@@ -161,7 +182,14 @@ int main(void)
 	// 	return ret;
 	// }
 
-	ret = ble_manager_init(ble_connection_state_cb);
+	struct ble_manager_cfg ble_manager_cfg = 
+	{
+		.connection_state_cb = ble_connection_state_cb,
+		.led_set_cb = app_led_cb,
+		.button_get_cb = app_button_cb,
+	};
+
+	ret = ble_manager_init(&ble_manager_cfg);
 	if (ret < 0)
 	{
 		LOG_ERR("Bluetooth initialization failed (err %d)", ret);

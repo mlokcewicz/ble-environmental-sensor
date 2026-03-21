@@ -16,7 +16,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
 
-#include <bluetooth/services/lbs.h>
+#include <services/my_lbs.h>
 
 //------------------------------------------------------------------------------
 
@@ -106,7 +106,6 @@ static void adv_work_handler(struct k_work *work)
 
 //------------------------------------------------------------------------------
 
-
 static void advertising_start(void)
 {
     k_work_submit(&adv_work);
@@ -188,10 +187,13 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 
     double connection_interval = BT_GAP_US_TO_CONN_INTERVAL(info.le.interval_us) * 1.25; // in ms
     uint16_t supervision_timeout = info.le.timeout * 10; // in ms
+    
     LOG_INF("Connection parameters: interval %.2f ms, latency %d intervals, timeout %d ms", connection_interval, info.le.latency, supervision_timeout);
 
     update_phy(my_conn);
+
     k_sleep(K_MSEC(1000));  // Delay added to avoid link layer collisions.
+    
     update_data_length(my_conn);
     update_mtu(my_conn);
 
@@ -202,6 +204,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 {
     LOG_INF("Disconnected. Reason %d", reason);
+
     bt_conn_unref(my_conn);
 
     if (connection_state_callback)
@@ -217,6 +220,7 @@ static void on_le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_
 {
     double connection_interval = interval * 1.25; // in ms
     uint16_t supervision_timeout = timeout * 10; // in ms
+
     LOG_INF("Connection parameters updated: interval %.2f ms, latency %d intervals, timeout %d ms", connection_interval, latency, supervision_timeout);
 }
 
@@ -258,14 +262,33 @@ BT_CONN_CB_DEFINE(conn_callbacks) =
 
 //------------------------------------------------------------------------------
 
-int ble_manager_init(ble_manager_connection_state_cb connection_state_cb)
+int ble_manager_init(struct ble_manager_cfg *cfg)
 {
+    if (!cfg)
+    {
+        LOG_ERR("Invalid configuration pointer");
+        return -1;
+    }
+
     int ret;
 
     k_work_init(&adv_work, adv_work_handler);
     k_work_init(&update_adv_data_work, update_adv_data_work_handler);
 
-    connection_state_callback = connection_state_cb;
+    connection_state_callback = cfg->connection_state_cb;
+
+    struct my_lbs_cb lbs_callbacks = 
+    {
+        .led_set_cb = cfg->led_set_cb,
+        .button_get_cb = cfg->button_get_cb,
+    };
+
+    ret = my_lbs_init(&lbs_callbacks);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to initialize My LBS Service (err %d)", ret);
+        return ret;
+    }
 
     bt_addr_le_t addr;
     ret = bt_addr_le_from_str("FF:EE:DD:CC:BB:AA", "random", &addr);
