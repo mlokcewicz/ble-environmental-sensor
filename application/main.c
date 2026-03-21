@@ -16,6 +16,7 @@
 #include <blink.h>
 
 #include "ble_manager.h"
+#include "services/my_lbs.h"
 
 //------------------------------------------------------------------------------
 
@@ -56,6 +57,8 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 {
 	bool pressed = gpio_pin_get_dt(&sw0);
 	button_state = pressed;
+
+	my_lbs_send_button_state_indicate(pressed);
 
 	if (pressed)
 	{

@@ -27,8 +27,11 @@
 
 struct my_lbs_ctx 
 {
-    bool button_state;
     struct my_lbs_cb lbs_cb;
+    struct bt_gatt_indicate_params ind_params;
+    bool button_state;
+    bool notify_mysensor_enabled;
+    bool indicate_enabled;
 };
 
 //------------------------------------------------------------------------------
@@ -96,12 +99,23 @@ static ssize_t write_led(struct bt_conn *conn, const struct bt_gatt_attr *attr, 
 	return len;
 }
 
+static void indicate_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
+{
+	LOG_DBG("Indication %s\n", err != 0U ? "fail" : "success");
+}
+
+static void mylbsbc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+	ctx.indicate_enabled = (value == BT_GATT_CCC_INDICATE);
+}
+
 //------------------------------------------------------------------------------
 
 /* LED Button Service Declaration - Create and add the MY LBS service to the Bluetooth LE stack */
 BT_GATT_SERVICE_DEFINE(my_lbs_svc, 
                        BT_GATT_PRIMARY_SERVICE(BT_UUID_LBS),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_LBS_BUTTON, BT_GATT_CHRC_READ, BT_GATT_PERM_READ, read_button, NULL, &ctx.button_state),
+                       BT_GATT_CHARACTERISTIC(BT_UUID_LBS_BUTTON, BT_GATT_CHRC_READ | BT_GATT_CHRC_INDICATE, BT_GATT_PERM_READ, read_button, NULL, &ctx.button_state),
+                       BT_GATT_CCC(mylbsbc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
                        BT_GATT_CHARACTERISTIC(BT_UUID_LBS_LED, BT_GATT_CHRC_WRITE, BT_GATT_PERM_WRITE, NULL, write_led, NULL),
 );
 
@@ -117,6 +131,19 @@ int my_lbs_init(struct my_lbs_cb *callbacks)
 	}
 
 	return 0;
+}
+
+int my_lbs_send_button_state_indicate(bool button_state)
+{
+	if (!ctx.indicate_enabled) 
+		return -EACCES;
+
+    ctx.ind_params.attr = &my_lbs_svc.attrs[2];
+	ctx.ind_params.func = indicate_cb;
+	ctx.ind_params.destroy = NULL;
+	ctx.ind_params.data = &button_state;
+	ctx.ind_params.len = sizeof(button_state);
+	return bt_gatt_indicate(NULL, &ctx.ind_params);
 }
 
 //------------------------------------------------------------------------------
