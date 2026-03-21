@@ -32,7 +32,8 @@ LOG_MODULE_REGISTER(main);
 #define LED0_NODE DT_ALIAS(led0) // Blink in while loop
 #define LED2_NODE DT_ALIAS(led2) // Indicates Bluetooth connection state (on when connected, off when disconnected)
 #define LED3_NODE DT_ALIAS(led3) // Used by LBS service
-#define SW0_NODE DT_ALIAS(sw0)
+#define SW0_NODE DT_ALIAS(sw0)   // Used by LBS service
+#define SW1_NODE DT_ALIAS(sw1)   // Used to unpair peer
 
 //------------------------------------------------------------------------------
 
@@ -40,6 +41,7 @@ static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
 static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 static const struct gpio_dt_spec sw0 = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
+static const struct gpio_dt_spec sw1 = GPIO_DT_SPEC_GET(SW1_NODE, gpios);
 
 static struct gpio_callback pin_cb_data;
 
@@ -55,17 +57,29 @@ static bool button_state = false;
 
 void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
-	bool pressed = gpio_pin_get_dt(&sw0);
-	button_state = pressed;
-
-	my_lbs_send_button_state_indicate(pressed);
-
-	if (pressed)
+	if (pins & BIT(sw0.pin))
 	{
-		LOG_WRN("Button pressed");
+		LOG_DBG("SW0 interrupt triggered");
+		
+		bool pressed = gpio_pin_get_dt(&sw0);
+		button_state = pressed;
+
+		my_lbs_send_button_state_indicate(pressed);
 
 		LOG_INF("Setting LED period to %u ms\n", BLINK_PERIOD_MS_MAX);
 		blink_set_period_ms(blink, 100);
+	}	
+
+	if (pins & BIT(sw1.pin))
+	{
+		LOG_DBG("SW1 interrupt triggered");
+
+		bool pressed = gpio_pin_get_dt(&sw1);
+		if (pressed)
+		{
+			LOG_INF("Unpairing Bluetooth peer");
+			ble_manager_unpair();
+		}
 	}
 }
 
@@ -143,9 +157,24 @@ int main(void)
 	if (ret < 0)
 		return ret;
 
-	gpio_init_callback(&pin_cb_data, pin_isr, BIT(sw0.pin));
+	if (!device_is_ready(sw1.port))
+		return -1;
+
+	ret = gpio_pin_configure_dt(&sw1, GPIO_INPUT);
+	if (ret < 0)
+		return ret;
+
+	ret = gpio_pin_interrupt_configure_dt(&sw1, GPIO_INT_EDGE_BOTH);
+	if (ret < 0)
+		return ret;
+
+	gpio_init_callback(&pin_cb_data, pin_isr, BIT(sw0.pin) | BIT(sw1.pin));
 
 	ret = gpio_add_callback(sw0.port, &pin_cb_data);
+	if (ret < 0)
+		return ret;
+
+	ret = gpio_add_callback(sw1.port, &pin_cb_data);
 	if (ret < 0)
 		return ret;
 

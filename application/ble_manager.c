@@ -7,6 +7,8 @@
 
 #include "ble_manager.h"
 
+#include <zephyr/settings/settings.h>
+
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -73,6 +75,7 @@ static struct bt_gatt_exchange_params exchange_params;
 
 static struct k_work update_adv_data_work;
 static struct k_work adv_work;
+static struct k_work unpair_work;
 
 static ble_manager_connection_state_cb connection_state_callback = NULL;
 
@@ -102,6 +105,24 @@ static void adv_work_handler(struct k_work *work)
 	}
 
 	LOG_INF("Advertising successfully started");
+}
+
+static void unpair_work_handler(struct k_work *work)
+{
+    if (!my_conn) 
+    {
+        LOG_WRN("No active connection to unpair");
+        return;
+    }
+
+    int ret = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+    if (ret)
+    {
+        LOG_INF("Cannot delete bond (err: %d)\n", ret);
+        return;
+    }
+
+    LOG_INF("Bond deleted succesfully \n");
 }
 
 //------------------------------------------------------------------------------
@@ -309,6 +330,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
 
     k_work_init(&adv_work, adv_work_handler);
     k_work_init(&update_adv_data_work, update_adv_data_work_handler);
+    k_work_init(&unpair_work, unpair_work_handler);
 
     connection_state_callback = cfg->connection_state_cb;
 
@@ -356,6 +378,8 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
 
     LOG_INF("Bluetooth initialized");
 
+    settings_load();
+
     // Start advertising
     advertising_start();
 
@@ -378,6 +402,18 @@ int ble_manager_notify_button_pressed(bool button_pressed)
     }
 
     return ret;
+}
+
+int ble_manager_unpair(void)
+{
+    int ret = k_work_submit(&unpair_work);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to submit work for unpairing (err %d)", ret);
+        return ret;
+    }
+
+    return 0;
 }
 
 //------------------------------------------------------------------------------

@@ -44,6 +44,10 @@ int ble_manager_init(struct ble_manager_cfg *cfg);
 /// @return 0 on success, or a negative error code on failure.
 int ble_manager_notify_button_pressed(bool button_pressed);
 
+/// @brief Unpairs the currently connected Bluetooth peer, if any.
+/// @return 0 on success, or a negative error code on failure.
+int ble_manager_unpair(void);
+
 //------------------------------------------------------------------------------
 
 #ifdef __cplusplus
