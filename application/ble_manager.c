@@ -31,6 +31,8 @@
 
 LOG_MODULE_REGISTER(ble_manager, LOG_LEVEL_INF);
 
+#define BT_LE_ADV_CONN_ACCEPT_LIST BT_LE_ADV_PARAM( BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_FILTER_CONN, BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+
 //------------------------------------------------------------------------------
 
 typedef struct adv_mfg_data 
@@ -45,11 +47,11 @@ typedef struct adv_mfg_data
 static adv_mfg_data_t adv_mfg_data = {COMPANY_ID_CODE, 0x00};
 
 // Advertising parameters
-static const struct bt_le_adv_param *adv_param = BT_LE_ADV_PARAM(
-    (BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY), /* Connectable advertising and use identity address */
-	BT_GAP_ADV_FAST_INT_MIN_1, /* 0x30 units, 48 units, 30ms */
-	BT_GAP_ADV_FAST_INT_MAX_1, /* 0x60 units, 96 units, 60ms */
-	NULL); /* Set to NULL for undirected advertising */
+// static const struct bt_le_adv_param *adv_param = BT_LE_ADV_PARAM(
+//     (BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY), /* Connectable advertising and use identity address */
+// 	BT_GAP_ADV_FAST_INT_MIN_1, /* 0x30 units, 48 units, 30ms */
+// 	BT_GAP_ADV_FAST_INT_MAX_1, /* 0x60 units, 96 units, 60ms */
+// 	NULL); /* Set to NULL for undirected advertising */
 
 
 // Advertising data - maximum 31 bytes for legacy advertising
@@ -81,6 +83,44 @@ static ble_manager_connection_state_cb connection_state_callback = NULL;
 
 //------------------------------------------------------------------------------
 
+
+static void setup_accept_list_cb(const struct bt_bond_info *info, void *user_data)
+{
+    int *bond_cnt = user_data;
+    
+    if ((*bond_cnt) < 0)
+        return;
+
+    int ret = bt_le_filter_accept_list_add(&info->addr);
+    
+    LOG_INF("Added following peer to whitelist: %x %x \n", info->addr.a.val[0], info->addr.a.val[1]);
+    
+    if (ret)
+    {
+        LOG_INF("Cannot add peer to Filter Accept List (err: %d)\n", ret);
+        (*bond_cnt) = -EIO;
+    }
+    else
+        (*bond_cnt)++;
+}
+
+static int setup_accept_list(uint8_t local_id)
+{
+	int ret = bt_le_filter_accept_list_clear();
+	if (ret) 
+    {
+		LOG_INF("Cannot clear Filter Accept List (err: %d)\n", ret);
+		return ret;
+	}
+
+	int bond_cnt = 0;
+	
+    bt_foreach_bond(local_id, setup_accept_list_cb, &bond_cnt);
+	
+    return bond_cnt;
+}
+ 
+
 static void update_adv_data_work_handler(struct k_work *work)
 {
     adv_mfg_data.number_press++;
@@ -96,15 +136,35 @@ static void update_adv_data_work_handler(struct k_work *work)
 
 static void adv_work_handler(struct k_work *work)
 {
-	int ret = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	// int ret = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
-	if (ret) 
+    int allowed_cnt = setup_accept_list(BT_ID_DEFAULT);
+    if (allowed_cnt < 0)
     {
-		LOG_ERR("Advertising failed to start (err %d)", ret);
-		return;
-	}
+        LOG_INF("Acceptlist setup failed (err:%d)\n", allowed_cnt);
+    }
+    else
+    {
+        int ret = 0;
+        if (allowed_cnt == 0)
+        {
+            LOG_INF("Advertising with no Accept list \n");
+            ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+        }
+        else
+        {
+            LOG_INF("Advertising with Accept list \n");
+            LOG_INF("Acceptlist setup number  = %d \n", allowed_cnt);
+            ret = bt_le_adv_start(BT_LE_ADV_CONN_ACCEPT_LIST, ad, ARRAY_SIZE(ad), sd,ARRAY_SIZE(sd));
+        }
+        if (ret)
+        {
+            LOG_INF("Advertising failed to start (err %d)\n", ret);
+            return;
+        }
 
-	LOG_INF("Advertising successfully started");
+        LOG_INF("Advertising successfully started\n");
+    }
 }
 
 static void unpair_work_handler(struct k_work *work)
