@@ -22,7 +22,7 @@
 
 LOG_MODULE_REGISTER(main);
 
-#define SLEEP_TIME_MS 500
+#define SLEEP_TIME_MS 1000
 
 #define UART_RECEIVE_TIMEOUT 	100
 #define UART_RECEIVE_BUFF_SIZE 	10
@@ -178,7 +178,7 @@ int main(void)
 		return ret;
 	}
 
-	// ret = device_is_ready(bme280_dev);rj.
+	// ret = device_is_ready(bme280_dev);
 	// if (!ret)
 	// {
 	// 	LOG_INF("Error: SPI device is not ready, err: %d", ret);
@@ -205,6 +205,8 @@ int main(void)
 
 		if (ret < 0)
 			return -1;
+
+		my_lbs_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
 
 		k_msleep(SLEEP_TIME_MS);
 

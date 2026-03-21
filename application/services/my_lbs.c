@@ -31,7 +31,7 @@ struct my_lbs_ctx
     struct bt_gatt_indicate_params ind_params;
     bool button_state;
     bool notify_mysensor_enabled;
-    bool indicate_enabled;
+    bool indicate_button_enabled;
 };
 
 //------------------------------------------------------------------------------
@@ -99,24 +99,33 @@ static ssize_t write_led(struct bt_conn *conn, const struct bt_gatt_attr *attr, 
 	return len;
 }
 
-static void indicate_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
+static void indicate_ack_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
 {
 	LOG_DBG("Indication %s\n", err != 0U ? "fail" : "success");
 }
 
 static void mylbsbc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
-	ctx.indicate_enabled = (value == BT_GATT_CCC_INDICATE);
+	ctx.indicate_button_enabled = (value == BT_GATT_CCC_INDICATE);
+}
+
+static void mylbsbc_ccc_mysensor_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+	ctx.notify_mysensor_enabled = (value == BT_GATT_CCC_NOTIFY);
 }
 
 //------------------------------------------------------------------------------
 
 /* LED Button Service Declaration - Create and add the MY LBS service to the Bluetooth LE stack */
-BT_GATT_SERVICE_DEFINE(my_lbs_svc, 
-                       BT_GATT_PRIMARY_SERVICE(BT_UUID_LBS),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_LBS_BUTTON, BT_GATT_CHRC_READ | BT_GATT_CHRC_INDICATE, BT_GATT_PERM_READ, read_button, NULL, &ctx.button_state),
-                       BT_GATT_CCC(mylbsbc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_LBS_LED, BT_GATT_CHRC_WRITE, BT_GATT_PERM_WRITE, NULL, write_led, NULL),
+BT_GATT_SERVICE_DEFINE
+(   
+    my_lbs_svc,
+    BT_GATT_PRIMARY_SERVICE(BT_UUID_LBS),
+    BT_GATT_CHARACTERISTIC(BT_UUID_LBS_BUTTON, BT_GATT_CHRC_READ | BT_GATT_CHRC_INDICATE, BT_GATT_PERM_READ, read_button, NULL, &ctx.button_state),
+    BT_GATT_CCC(mylbsbc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_LBS_LED, BT_GATT_CHRC_WRITE, BT_GATT_PERM_WRITE, NULL, write_led, NULL),
+    BT_GATT_CHARACTERISTIC(BT_UUID_LBS_MYSENSOR, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
+    BT_GATT_CCC(mylbsbc_ccc_mysensor_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE), 
 );
 
 //------------------------------------------------------------------------------
@@ -135,15 +144,24 @@ int my_lbs_init(struct my_lbs_cb *callbacks)
 
 int my_lbs_send_button_state_indicate(bool button_state)
 {
-	if (!ctx.indicate_enabled) 
+	if (!ctx.indicate_button_enabled) 
 		return -EACCES;
 
     ctx.ind_params.attr = &my_lbs_svc.attrs[2];
-	ctx.ind_params.func = indicate_cb;
+	ctx.ind_params.func = indicate_ack_cb;
 	ctx.ind_params.destroy = NULL;
 	ctx.ind_params.data = &button_state;
 	ctx.ind_params.len = sizeof(button_state);
 	return bt_gatt_indicate(NULL, &ctx.ind_params);
 }
+
+int my_lbs_send_sensor_notify(uint32_t sensor_value)
+{
+	if (!ctx.notify_mysensor_enabled) 
+		return -EACCES;
+
+	return bt_gatt_notify(NULL, &my_lbs_svc.attrs[7], &sensor_value, sizeof(sensor_value));
+}
+
 
 //------------------------------------------------------------------------------
