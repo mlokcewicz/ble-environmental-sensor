@@ -2,6 +2,16 @@
 
 BLE environmental sensor (temperature, humidity, pressure) based on Nordic Thingy52.
 
+## Capabilities
+
+
+- temp. humidity, pressure (notifications) 
+- led and button
+- custom service
+- pairing with encryption and authentication, bonding
+- filer accept list
+- dfu over ble?
+
 ## Tools
 
 * CMake 3.27.0

@@ -216,6 +216,22 @@ static void on_recycled(void)
     advertising_start();
 }
 
+static void on_security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (!err) 
+    {
+		LOG_INF("Security changed: %s level %u\n", addr, level);
+	} 
+    else 
+    {
+		LOG_INF("Security failed: %s level %u err %d\n", addr, level, err);
+	}
+}
+
 static void on_le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
 {
     double connection_interval = interval * 1.25; // in ms
@@ -255,9 +271,30 @@ BT_CONN_CB_DEFINE(conn_callbacks) =
 	.connected = on_connected,
     .disconnected = on_disconnected,
 	.recycled = on_recycled,
+    .security_changed = on_security_changed,
     .le_param_updated = on_le_param_updated,
     .le_phy_updated = on_le_phy_updated,
     .le_data_len_updated = on_le_data_len_updated,
+};
+
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Passkey for %s: %06u\n", addr, passkey);
+}
+
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Pairing cancelled: %s\n", addr);
+}
+
+static struct bt_conn_auth_cb conn_auth_callbacks = 
+{
+	.passkey_display = auth_passkey_display,
+	.cancel = auth_cancel,
 };
 
 //------------------------------------------------------------------------------
@@ -270,12 +307,17 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
         return -1;
     }
 
-    int ret;
-
     k_work_init(&adv_work, adv_work_handler);
     k_work_init(&update_adv_data_work, update_adv_data_work_handler);
 
     connection_state_callback = cfg->connection_state_cb;
+
+    int ret = bt_conn_auth_cb_register(&conn_auth_callbacks);
+    if (ret)
+    {
+         LOG_ERR("Failed to register authentication callbacks (err %d)", ret);
+         return ret;
+    }
 
     struct my_lbs_cb lbs_callbacks = 
     {
