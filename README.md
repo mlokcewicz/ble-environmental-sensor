@@ -1,16 +1,15 @@
 # ble-environmental-sensor 
 
-BLE environmental sensor (temperature, humidity, pressure) based on Nordic Thingy52.
+BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52832 MCU and BME280 sensor.
 
 ## Capabilities
 
-
-- temp. humidity, pressure (notifications) 
-- led and button
-- custom service
-- pairing with encryption and authentication, bonding
-- filer accept list
-- dfu over ble?
+- Temperature, humidity and pressure measurements sent to central by notifications 
+- Led and button handling for user-defined purposes
+- Custom BLE service including suitable characteristics
+- Pairing with encryption and authentication and bonding with filer accept list handling
+- Up to 5 paired devices handling, ability to reset bonded list and enter pairing mode
+- DFU over BLE support
 
 ## Tools
 

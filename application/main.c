@@ -154,7 +154,7 @@ int main(void)
 		return ret;
 
 	if (!device_is_ready(led3.port))
-			return -1;
+		return -1;
 
 	ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
 	if (ret < 0)
@@ -240,12 +240,12 @@ int main(void)
 		return ret;
 	}
 
-	// ret = device_is_ready(bme280_dev);
-	// if (!ret)
-	// {
-	// 	LOG_INF("Error: SPI device is not ready, err: %d", ret);
-	// 	return ret;
-	// }
+	ret = device_is_ready(bme280_dev);
+	if (!ret)
+	{
+		LOG_INF("Error: SPI device is not ready, err: %d", ret);
+		return ret;
+	}
 
 	struct ble_manager_cfg ble_manager_cfg = 
 	{
@@ -272,7 +272,7 @@ int main(void)
 
 		k_msleep(SLEEP_TIME_MS);
 
-#if 0
+#if 1
 		struct sensor_value temp_val;
 		struct sensor_value press_val;
 		struct sensor_value hum_val;
