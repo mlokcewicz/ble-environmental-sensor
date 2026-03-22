@@ -34,6 +34,7 @@ LOG_MODULE_REGISTER(main);
 #define LED3_NODE DT_ALIAS(led3) // Used by LBS service
 #define SW0_NODE DT_ALIAS(sw0)   // Used by LBS service
 #define SW1_NODE DT_ALIAS(sw1)   // Used to unpair peer
+#define SW2_NODE DT_ALIAS(sw2)   // Used to enter pairing mode
 
 //------------------------------------------------------------------------------
 
@@ -42,6 +43,7 @@ static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
 static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 static const struct gpio_dt_spec sw0 = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
 static const struct gpio_dt_spec sw1 = GPIO_DT_SPEC_GET(SW1_NODE, gpios);
+static const struct gpio_dt_spec sw2 = GPIO_DT_SPEC_GET(SW2_NODE, gpios);
 
 static struct gpio_callback pin_cb_data;
 
@@ -79,6 +81,18 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		{
 			LOG_INF("Unpairing Bluetooth peer");
 			ble_manager_unpair();
+		}
+	}
+
+	if (pins & BIT(sw2.pin))
+	{
+		LOG_DBG("SW2 interrupt triggered");
+
+		bool pressed = gpio_pin_get_dt(&sw2);
+		if (pressed)
+		{
+			LOG_INF("Entering pairing mode");
+			ble_manager_enter_pairing_mode();
 		}
 	}
 }
@@ -168,13 +182,32 @@ int main(void)
 	if (ret < 0)
 		return ret;
 
-	gpio_init_callback(&pin_cb_data, pin_isr, BIT(sw0.pin) | BIT(sw1.pin));
+	if (!device_is_ready(sw2.port))
+		return -1;
+
+	ret = gpio_pin_configure_dt(&sw2, GPIO_INPUT);
+	if (ret < 0)
+		return ret;
+
+	ret = gpio_pin_interrupt_configure_dt(&sw2, GPIO_INT_EDGE_BOTH);
+	if (ret < 0)
+		return ret;
+
+	gpio_init_callback(&pin_cb_data, pin_isr, BIT(sw0.pin) | BIT(sw1.pin) | BIT(sw2.pin));
 
 	ret = gpio_add_callback(sw0.port, &pin_cb_data);
 	if (ret < 0)
 		return ret;
 
 	ret = gpio_add_callback(sw1.port, &pin_cb_data);
+	if (ret < 0)
+		return ret;
+
+	ret = gpio_add_callback(sw1.port, &pin_cb_data);
+	if (ret < 0)
+		return ret;
+
+	ret = gpio_add_callback(sw2.port, &pin_cb_data);
 	if (ret < 0)
 		return ret;
 

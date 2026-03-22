@@ -78,11 +78,13 @@ static struct bt_gatt_exchange_params exchange_params;
 static struct k_work update_adv_data_work;
 static struct k_work adv_work;
 static struct k_work unpair_work;
+static struct k_work pairing_mode_work;
+
+static bool pairing_mode = false;
 
 static ble_manager_connection_state_cb connection_state_callback = NULL;
 
 //------------------------------------------------------------------------------
-
 
 static void setup_accept_list_cb(const struct bt_bond_info *info, void *user_data)
 {
@@ -138,6 +140,31 @@ static void adv_work_handler(struct k_work *work)
 {
 	// int ret = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
+    if (pairing_mode == true)
+    {
+        int err = bt_le_filter_accept_list_clear();
+        if (err)
+        {
+            LOG_INF("Cannot clear accept list (err: %d)\n", err);
+        }
+        else
+        {
+            LOG_INF("Accept list cleared succesfully");
+        }
+
+        pairing_mode = false;
+        
+        err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd,
+                              ARRAY_SIZE(sd));
+        if (err)
+        {
+            LOG_INF("Advertising failed to start (err %d)\n", err);
+            return;
+        }
+        LOG_INF("Advertising successfully started\n");
+        return;
+    }
+
     int allowed_cnt = setup_accept_list(BT_ID_DEFAULT);
     if (allowed_cnt < 0)
     {
@@ -183,6 +210,20 @@ static void unpair_work_handler(struct k_work *work)
     }
 
     LOG_INF("Bond deleted succesfully \n");
+}
+
+static void pairing_mode_work_handler(struct k_work *work)
+{
+    pairing_mode = true;
+
+    int ret = bt_le_adv_stop();
+    if (ret)
+    {
+        LOG_INF("Failed to stop advertising (err %d)\n", ret);
+        return;
+    }
+
+    LOG_INF("Advertising stopped, entering pairing mode\n");
 }
 
 //------------------------------------------------------------------------------
@@ -391,6 +432,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
     k_work_init(&adv_work, adv_work_handler);
     k_work_init(&update_adv_data_work, update_adv_data_work_handler);
     k_work_init(&unpair_work, unpair_work_handler);
+    k_work_init(&pairing_mode_work, pairing_mode_work_handler);
 
     connection_state_callback = cfg->connection_state_cb;
 
@@ -414,19 +456,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
         return ret;
     }
 
-    bt_addr_le_t addr;
-    ret = bt_addr_le_from_str("FF:EE:DD:CC:BB:AA", "random", &addr);
-    if (ret < 0) 
-    {
-         LOG_ERR("Invalid BT address (err %d)", ret);
-         return ret;
-    }   
 
-    ret = bt_id_create(&addr, NULL);
-    if (ret < 0)
-    {
-        LOG_ERR("Creating new ID failed (err %d)", ret);
-    }
 
     // Initialize the Bluetooth Subsystem
     ret = bt_enable(NULL);
@@ -435,6 +465,21 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
         LOG_ERR("Bluetooth init failed (err %d)", ret);
         return ret;
     }
+
+    // bt_addr_le_t addr;
+    // ret = bt_addr_le_from_str("FF:EE:DD:CC:BB:AA", "random", &addr);
+    // if (ret < 0) 
+    // {
+    //      LOG_ERR("Invalid BT address (err %d)", ret);
+    //      return ret;
+    // }   
+    // ret = bt_id_create(&addr, NULL);
+    ret = bt_id_create(NULL, NULL); // auto generate when privacy is enabled
+    if (ret < 0)
+    {
+        LOG_ERR("Creating new ID failed (err %d)", ret);
+    }
+
 
     LOG_INF("Bluetooth initialized");
 
@@ -470,6 +515,18 @@ int ble_manager_unpair(void)
     if (ret < 0)
     {
         LOG_ERR("Failed to submit work for unpairing (err %d)", ret);
+        return ret;
+    }
+
+    return 0;
+}
+
+int ble_manager_enter_pairing_mode(void)
+{
+    int ret = k_work_submit(&pairing_mode_work);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to submit work for entering pairing mode (err %d)", ret);
         return ret;
     }
 

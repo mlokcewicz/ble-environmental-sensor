@@ -48,6 +48,10 @@ int ble_manager_notify_button_pressed(bool button_pressed);
 /// @return 0 on success, or a negative error code on failure.
 int ble_manager_unpair(void);
 
+/// @brief Enters pairing mode, allowing new devices to pair with this device.
+/// @return 0 on success, or a negative error code on failure.
+int ble_manager_enter_pairing_mode(void);
+
 //------------------------------------------------------------------------------
 
 #ifdef __cplusplus
