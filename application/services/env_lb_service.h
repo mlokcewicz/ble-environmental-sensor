@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------------
 
-/// @file my_lbs.h
+/// @file env_lb_service.h
 /// @note Copyright (C) Michał Łokcewicz. All rights reserved.
 
 //------------------------------------------------------------------------------
 
-#ifndef MY_LBS_H_
-#define MY_LBS_H_
+#ifndef ENV_LB_SERVICE_H_
+#define ENV_LB_SERVICE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,15 +20,15 @@ extern "C" {
 
 //------------------------------------------------------------------------------
 
-#define BT_UUID_LBS_VAL BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
-#define BT_UUID_LBS_BUTTON_VAL BT_UUID_128_ENCODE(0x00001524, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
-#define BT_UUID_LBS_LED_VAL BT_UUID_128_ENCODE(0x00001525, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
-#define BT_UUID_LBS_MYSENSOR_VAL BT_UUID_128_ENCODE(0x00001526, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+#define BT_UUID_ENV_LBS_VAL BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+#define BT_UUID_ENV_LBS_BUTTON_VAL BT_UUID_128_ENCODE(0x00001524, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+#define BT_UUID_ENV_LBS_LED_VAL BT_UUID_128_ENCODE(0x00001525, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+#define BT_UUID_ENV_LBS_MYSENSOR_VAL BT_UUID_128_ENCODE(0x00001526, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
   
-#define BT_UUID_LBS BT_UUID_DECLARE_128(BT_UUID_LBS_VAL)
-#define BT_UUID_LBS_BUTTON BT_UUID_DECLARE_128(BT_UUID_LBS_BUTTON_VAL)
-#define BT_UUID_LBS_LED BT_UUID_DECLARE_128(BT_UUID_LBS_LED_VAL)
-#define BT_UUID_LBS_MYSENSOR BT_UUID_DECLARE_128(BT_UUID_LBS_MYSENSOR_VAL)
+#define BT_UUID_ENV_LBS BT_UUID_DECLARE_128(BT_UUID_ENV_LBS_VAL)
+#define BT_UUID_ENV_LBS_BUTTON BT_UUID_DECLARE_128(BT_UUID_ENV_LBS_BUTTON_VAL)
+#define BT_UUID_ENV_LBS_LED BT_UUID_DECLARE_128(BT_UUID_ENV_LBS_LED_VAL)
+#define BT_UUID_ENV_LBS_MYSENSOR BT_UUID_DECLARE_128(BT_UUID_ENV_LBS_MYSENSOR_VAL)
 
 //------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ typedef void (*led_cb_t)(const bool led_state);
 typedef bool (*button_cb_t)(void);
 
 /// @brief Callback struct used by the LBS Service.
-struct my_lbs_cb 
+struct env_lb_service_cb 
 {
 	led_cb_t led_set_cb;
 	button_cb_t button_get_cb;
@@ -49,29 +49,29 @@ struct my_lbs_cb
 
 //------------------------------------------------------------------------------
 
-/// @brief Initialize the LBS Service.
-/// @note This function registers application callback functions with the My LBS Service
+/// @brief Initialize the ENV LB Service.
+/// @note This function registers application callback functions with the ENV LB Service
 /// @param[in] callbacks Struct containing pointers to callback functions used by the service. 
 /// @return 0 If the operation was successful. Otherwise, a (negative) error code is returned.
-int my_lbs_init(struct my_lbs_cb *callbacks);
+int env_lb_service_init(struct env_lb_service_cb *callbacks);
 
 /// @brief Send the button state as indication.
 /// @note This function sends a binary state, typically the state of a button, to all connected peers.
 /// @param[in] button_state The state of the button.
 /// @return 0 If the operation was successful. Otherwise, a (negative) error code is returned.
-int my_lbs_send_button_state_indicate(bool button_state);
+int env_lb_service_send_button_state_indicate(bool button_state);
 
 /// @brief Send the button state as notification.
 /// This function sends a binary state, typically the state of a button, to all connected peers.
 /// @param[in] button_state The state of the button.
 /// @return 0 If the operation was successful. Otherwise, a (negative) error code is returned.
-int my_lbs_send_button_state_notify(bool button_state);
+int env_lb_service_send_button_state_notify(bool button_state);
 
 /// @brief Send the sensor value as notification.
 /// @note This function sends an uint32_t a sensor to all connected peers.
 /// @param[in] sensor_value The value of the simulated sensor.
 /// @return 0 If the operation was successful. Otherwise, a (negative) error code is returned.
-int my_lbs_send_sensor_notify(uint32_t sensor_value);
+int env_lb_service_send_sensor_notify(uint32_t sensor_value);
 
 //------------------------------------------------------------------------------
 
@@ -79,6 +79,6 @@ int my_lbs_send_sensor_notify(uint32_t sensor_value);
 }
 #endif
 
-#endif /* MY_LBS_H_ */
+#endif /* ENV_LB_SERVICE_H_ */
 
 //------------------------------------------------------------------------------

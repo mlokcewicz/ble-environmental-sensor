@@ -1,0 +1,361 @@
+@startuml
+title BLE fundamentals - parameters, ranges and ownership
+
+
+skinparam backgroundColor white
+skinparam sequence {
+   ArrowColor #444444
+   LifeLineBorderColor #666666
+   LifeLineBackgroundColor #F7F7F7
+   ParticipantBorderColor #666666
+   ParticipantBackgroundColor #FDFDFD
+   BoxBorderColor #888888
+}
+
+
+actor "Peripheral" as P
+actor "Central" as C
+
+
+== 1. Advertising configuration ==
+
+
+group Peripheral configures advertising
+   P -> P: Set advertising interval
+   note right
+     advertising interval:
+     - range: 20 ms – 10.24 s
+     - step: 0.625 ms
+     - defines how often packets are sent
+   end note
+
+
+   P -> P: Set advertising type
+   note right
+     advertising type:
+     - connectable / scannable / non-connectable
+     - defines if device can be connected or scanned
+   end note
+
+
+   P -> P: Set advertising data
+   note right
+     advertising data:
+     - max: 31 B (legacy)
+     - contains UUIDs, name, manufacturer data
+   end note
+
+
+   P -> P: Start advertising
+end group
+
+
+== 2. Scanning configuration ==
+
+
+group Central configures scanning
+   C -> C: Set scan interval
+   note right
+     scan interval:
+     - range: 2.5 ms – 10.24 s
+     - step: 0.625 ms
+     - how often scanning starts
+   end note
+
+
+   C -> C: Set scan window
+   note right
+     scan window:
+     - range: 2.5 ms – 10.24 s
+     - step: 0.625 ms
+     - how long radio listens
+     - must be ≤ interval
+   end note
+
+
+   C -> C: Set scan type
+   note right
+     scan type:
+     - passive / active
+     - active sends scan request
+   end note
+end group
+
+
+== 3. Discovery ==
+
+
+P -> C: Advertising packets
+alt Active scanning
+   C -> P: Scan Request
+   P -> C: Scan Response
+end
+
+
+== 4. Connection establishment ==
+
+
+C -> P: Connection request
+
+
+group Initial connection parameters
+   C -> P: connection interval
+   note right
+     connection interval:
+     - range: 7.5 ms – 4 s
+     - step: 1.25 ms
+     - time between connection events
+   end note
+
+
+   C -> P: slave latency
+   note right
+     slave latency:
+     - range: 0 – 499
+     - step: 1
+     - number of events peripheral may skip
+   end note
+
+
+   C -> P: supervision timeout
+   note right
+     supervision timeout:
+     - range: 100 ms – 32 s
+     - step: 10 ms
+     - max time without packets before disconnect
+   end note
+end group
+
+
+== 5. Connected state ==
+
+
+group Connection events
+   loop Every connection interval
+       C -> P: Data exchange
+       P -> C: Data exchange
+   end
+end group
+
+
+== 6. Connection parameter update ==
+
+
+P -> C: Connection parameter update request
+note right of P
+ Peripheral suggests better timing
+end note
+
+
+alt Central accepts
+   C -> P: Apply new parameters
+else Central rejects or modifies
+   C -> P: Reject or adjust values
+end
+
+
+== 7. Pairing / security initiation ==
+
+
+alt Central initiates pairing
+   C -> P: Pairing Request
+else Peripheral requests security
+   P -> C: Security Request
+   C -> P: Pairing Request
+end
+
+
+group Phase 1: Pairing feature exchange
+   P -> C: Pairing Response
+   note right
+     pairing parameters:
+     - IO capability
+     - OOB flag
+     - bonding flag
+     - MITM protection requested or not
+     - Secure Connections support
+     - keypress support
+     - max encryption key size: 7 – 16 B
+     - initiator key distribution
+     - responder key distribution
+   end note
+end group
+
+
+group Phase 1: Pairing method selection
+   note right
+     pairing method is derived from:
+     - IO capabilities of both sides
+     - legacy pairing vs LE Secure Connections
+     - MITM requirement
+     - OOB availability
+
+     common methods:
+     - Just Works
+     - Passkey Entry
+     - Numeric Comparison
+     - Out of Band
+   end note
+
+   alt Just Works
+      C -> P: Confirm values implicitly
+   else Passkey Entry
+      C -> P: Enter / display passkey
+      P -> C: Enter / display passkey
+   else Numeric Comparison
+      C -> P: Show same 6-digit number
+      P -> C: User confirms match
+   else OOB
+      C -> P: Use external OOB data
+   end
+end group
+
+
+group Phase 2: STK/LTK generation and authentication
+   note right
+     result of pairing:
+     - shared temporary or long-term key material
+     - optional MITM protection
+     - optional Secure Connections authentication
+   end note
+end group
+
+
+group Phase 2: Link encryption start
+   C -> P: Start encryption
+   P -> C: Encryption response
+   note right
+     encryption:
+     - enabled after successful pairing
+     - protects link-layer data
+     - required for protected GATT attributes
+   end note
+end group
+
+
+== 8. Bonding ==
+
+
+alt Phase 3: Bonding requested
+   group Key distribution and storage
+      C -> P: Distribute keys
+      P -> C: Distribute keys
+      note right
+        possible stored keys:
+        - LTK: reconnect encryption
+        - IRK: resolve private addresses
+        - CSRK: signed writes
+        - identity address
+        - EDIV/Rand in legacy context
+
+        bonding means:
+        - pairing information is stored
+        - device can reconnect securely later
+      end note
+   end group
+else No bonding
+   note right
+     pairing only:
+     - link may be encrypted now
+     - keys are not stored for future use
+   end note
+end
+
+
+== 9. GATT / link parameters ==
+
+
+group ATT MTU exchange
+   C -> P: MTU request
+   P -> C: MTU response
+   note right
+     ATT MTU:
+     - default: 23
+     - spec range: 23 – 517
+     - practical max with one 251 B LL payload: 247
+     - ATT payload: 20 default, 244 practical
+     - defines max GATT packet size
+   end note
+end group
+
+
+group Data Length Update (DLE)
+   C -> P: LL length update
+   P -> C: LL length update
+   note right
+     LL Data Length:
+     - default LL payload: 27 B
+     - max LL payload with DLE: 251 B
+     - defines max Link Layer data field size
+   end note
+end group
+
+
+group PHY update
+   C -> P: PHY update
+   P -> C: PHY update
+   note right
+     PHY:
+     - 1M / 2M / Coded
+     - defines data rate and range
+   end note
+end group
+
+
+== 10. GATT operations ==
+
+
+group GATT
+   C -> P: Discover services
+   C -> P: Read / Write
+   P -> C: Notifications
+   note right
+     GATT:
+     - application data exchange layer
+     - some attributes may require:
+       - encryption
+       - authentication
+       - authorization
+   end note
+end group
+
+
+== 11. Reconnection with existing bond ==
+
+
+... Later connection ...
+
+
+C -> P: Connect again
+
+
+alt Device has stored bond
+   group Re-encryption using stored keys
+      C -> P: Start encryption using stored LTK
+      P -> C: Encryption response
+      note right
+        no full pairing needed again if:
+        - bond still exists on both sides
+        - keys are valid
+      end note
+   end group
+else No bond or keys lost
+   note right
+     pairing must be repeated
+   end note
+end
+
+
+== 12. Disconnect ==
+
+
+alt Timeout
+   C -> P: Supervision timeout
+else Central disconnects
+   C -> P: Disconnect
+else Peripheral disconnects
+   P -> C: Disconnect
+end
+
+
+@enduml

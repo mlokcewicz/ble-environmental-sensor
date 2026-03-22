@@ -16,7 +16,7 @@
 #include <blink.h>
 
 #include "ble_manager.h"
-#include "services/my_lbs.h"
+#include "services/env_lb_service.h"
 
 //------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		bool pressed = gpio_pin_get_dt(&sw0);
 		button_state = pressed;
 
-		my_lbs_send_button_state_indicate(pressed);
+		env_lb_service_send_button_state_indicate(pressed);
 
 		LOG_INF("Setting LED period to %u ms\n", BLINK_PERIOD_MS_MAX);
 		blink_set_period_ms(blink, 100);
@@ -268,7 +268,7 @@ int main(void)
 		if (ret < 0)
 			return -1;
 
-		my_lbs_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
+		env_lb_service_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
 
 		k_msleep(SLEEP_TIME_MS);
 
