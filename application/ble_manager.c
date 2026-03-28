@@ -428,6 +428,8 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
     {
         .led_set_cb = cfg->led_set_cb,
         .button_get_cb = cfg->button_get_cb,
+        .sampling_interval_get_cb = cfg->sampling_interval_get_cb,
+        .sampling_interval_set_cb = cfg->sampling_interval_set_cb,
     };
 
     ret = env_lb_service_init(&lbs_callbacks);

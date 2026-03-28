@@ -113,6 +113,16 @@ static void app_lbs_led_cb(const bool led_state)
 	// gpio_pin_set_dt(&led3, led_state);
 }
 
+static uint32_t app_sampling_interval_get_cb(void)
+{
+	return 1000; // Return a default sampling interval of 1000 ms
+}
+
+static void app_sampling_interval_set_cb(uint32_t sampling_interval_ms)
+{
+	LOG_INF("Sampling interval updated to %d ms", sampling_interval_ms);
+}
+
 //------------------------------------------------------------------------------
 
 int main(void)
@@ -145,6 +155,8 @@ int main(void)
 		.connection_state_cb = app_ble_connection_state_cb,
 		.led_set_cb = app_lbs_led_cb,
 		.button_get_cb = app_lbs_button_cb,
+		.sampling_interval_get_cb = app_sampling_interval_get_cb,
+		.sampling_interval_set_cb = app_sampling_interval_set_cb,
 	};
 
 	ret = ble_manager_init(&ble_manager_cfg);
