@@ -9,7 +9,7 @@
 
 #include <zephyr/logging/log.h>
 
-#include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/watchdog.h>
 
 #include <ble_manager.h>
 #include <services/env_lb_service.h>
@@ -22,6 +22,7 @@
 LOG_MODULE_REGISTER(main);
 
 #define SLEEP_TIME_MS 1000
+#define WDT_TIMEOUT_MS 2000
 
 //------------------------------------------------------------------------------
 /* Threads definitions */
@@ -60,6 +61,43 @@ static void env_manager_thread_func(void *unused1, void *unused2, void *unused3)
 
 //------------------------------------------------------------------------------
 
+const struct device *const wdt = DEVICE_DT_GET(DT_ALIAS(watchdog0));
+
+//------------------------------------------------------------------------------
+
+static int configure_watchdog(void)
+{
+	if (!device_is_ready(wdt))
+	{
+		LOG_ERR("Watchdog device is not ready");
+		return -ENODEV;
+	}
+
+	struct wdt_timeout_cfg wdt_config = 
+	{
+		.window.min = 0,
+		.window.max = WDT_TIMEOUT_MS,
+		.callback = NULL, // No callback, just reset
+		.flags = WDT_FLAG_RESET_SOC,
+	};
+
+	int wdt_channel_id = wdt_install_timeout(wdt, &wdt_config);
+	if (wdt_channel_id < 0)
+	{
+		LOG_ERR("Failed to install watchdog timeout (err %d)", wdt_channel_id);
+		return wdt_channel_id;
+	}
+
+	int ret = wdt_setup(wdt, WDT_OPT_PAUSE_HALTED_BY_DBG);
+	if (ret < 0)
+	{
+		LOG_ERR("Failed to setup watchdog (err %d)", ret);
+		return ret;
+	}
+
+	return wdt_channel_id;
+}	
+
 static void ble_connection_state_cb(bool connected)
 {
 	// gpio_pin_set_dt(&led2, connected);
@@ -83,6 +121,13 @@ static void app_led_cb(const bool led_state)
 int main(void)
 {
 	LOG_INF("Main started");
+
+	int wdt_channel_id = configure_watchdog();
+	if (wdt_channel_id < 0)
+	{
+		LOG_ERR("Watchdog configuration failed, err: %d", wdt_channel_id);
+		return wdt_channel_id;
+	}
 
 	int ret = ui_manager_init();
 	if (ret < 0)
@@ -131,6 +176,8 @@ int main(void)
 	while (1)
 	{
 		env_lb_service_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
+
+		wdt_feed(wdt, wdt_channel_id);
 
 		k_msleep(SLEEP_TIME_MS);
 	}

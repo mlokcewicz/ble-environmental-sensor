@@ -279,7 +279,7 @@ static int custom_bme280_sample_fetch(const struct device *dev,
 		return err;
 	}
 
-	LOG_INF("Sensor Data acquired");
+	LOG_DBG("Sensor Data acquired");
 
 	adc_press = (buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4);
 	adc_temp = (buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4);
@@ -465,12 +465,12 @@ static int custom_bme280_pm_action(const struct device *dev,
 	switch (action)
 	{
 	case PM_DEVICE_ACTION_RESUME:
-		LOG_INF("Resuming BME280 sensor");
+		LOG_DBG("Resuming BME280 sensor");
 		/* Re-initialize the chip */
 		ret = custom_bme280_init(dev);
 		break;
 	case PM_DEVICE_ACTION_SUSPEND:
-		LOG_INF("Suspending BME280 sensor");
+		LOG_DBG("Suspending BME280 sensor");
 		/* Put the chip into sleep mode */
 		ret = bme280_reg_write(dev,
 							   CTRLMEAS,

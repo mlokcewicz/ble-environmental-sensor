@@ -62,9 +62,9 @@ int env_manager_process(void)
         return -1;
     }
 
-    LOG_INF("Compensated temperature value: %d", temp_val.val1);
-    LOG_INF("Compensated pressure value: %d", press_val.val1);
-    LOG_INF("Compensated humidity value: %d", hum_val.val1);
+    // LOG_INF("Compensated temperature value: %d", temp_val.val1);
+    // LOG_INF("Compensated pressure value: %d", press_val.val1);
+    // LOG_INF("Compensated humidity value: %d", hum_val.val1);
 
     k_msleep(1000); // Add sampling interval
 
