@@ -1,6 +1,8 @@
 # main app target
 
 target_sources(app PRIVATE main.c)
+target_sources(app PRIVATE ui_manager.c)
+target_sources(app PRIVATE env_manager.c)
 target_sources(app PRIVATE ble_manager.c)
 target_sources(app PRIVATE services/env_lb_service.c)
 

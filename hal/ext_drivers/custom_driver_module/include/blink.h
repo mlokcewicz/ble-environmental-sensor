@@ -43,6 +43,11 @@ static inline int blink_off(const struct device *dev)
 	return blink_set_period_ms(dev, 0);
 }
 
+static inline int blink_on(const struct device *dev)
+{
+	return blink_set_period_ms(dev, UINT_MAX);
+}
+
 /* STEP 2.5 Add the syscall header at the end of the header file */
 #include <syscalls/blink.h>
 

@@ -42,7 +42,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg);
 /// @brief Updates the advertising data to reflect a button press event.
 /// @param button_pressed true if the button is pressed, false otherwise
 /// @return 0 on success, or a negative error code on failure.
-int ble_manager_notify_button_pressed(bool button_pressed);
+int ble_manager_advertise_button_pressed(bool button_pressed);
 
 /// @brief Unpairs the currently connected Bluetooth peer, if any.
 /// @return 0 on success, or a negative error code on failure.
