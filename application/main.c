@@ -7,13 +7,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util_macro.h>
 
+#include <zephyr/drivers/watchdog.h>
 #include <zephyr/logging/log.h>
 
-#include <zephyr/drivers/watchdog.h>
-
 #include <ble_manager.h>
-#include <services/env_lb_service.h>
-
 #include <ui_manager.h>
 #include <env_manager.h>
 
@@ -98,20 +95,20 @@ static int configure_watchdog(void)
 	return wdt_channel_id;
 }	
 
-static void ble_connection_state_cb(bool connected)
+static void app_ble_connection_state_cb(bool connected)
 {
 	// gpio_pin_set_dt(&led2, connected);
 	void remove_me_set_ui_conn(bool connected);
 	remove_me_set_ui_conn(connected);
 }
 
-static bool app_button_cb(void)
+static bool app_lbs_button_cb(void)
 {
 	// return button_state;
 	return false;
 }
 
-static void app_led_cb(const bool led_state)
+static void app_lbs_led_cb(const bool led_state)
 {
 	// gpio_pin_set_dt(&led3, led_state);
 }
@@ -145,9 +142,9 @@ int main(void)
 
 	struct ble_manager_cfg ble_manager_cfg = 
 	{
-		.connection_state_cb = ble_connection_state_cb,
-		.led_set_cb = app_led_cb,
-		.button_get_cb = app_button_cb,
+		.connection_state_cb = app_ble_connection_state_cb,
+		.led_set_cb = app_lbs_led_cb,
+		.button_get_cb = app_lbs_button_cb,
 	};
 
 	ret = ble_manager_init(&ble_manager_cfg);
@@ -175,7 +172,12 @@ int main(void)
 
 	while (1)
 	{
+
+
+		int env_lb_service_send_sensor_notify(uint32_t sensor_value);
 		env_lb_service_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
+
+
 
 		wdt_feed(wdt, wdt_channel_id);
 
