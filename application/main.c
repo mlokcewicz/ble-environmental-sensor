@@ -10,6 +10,8 @@
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/logging/log.h>
 
+#include <zephyr/drivers/adc.h>
+
 #include <ble_manager.h>
 #include <ui_manager.h>
 #include <env_manager.h>
@@ -58,7 +60,8 @@ static void env_manager_thread_func(void *unused1, void *unused2, void *unused3)
 
 //------------------------------------------------------------------------------
 
-const struct device *const wdt = DEVICE_DT_GET(DT_ALIAS(watchdog0));
+static const struct device *const wdt = DEVICE_DT_GET(DT_ALIAS(watchdog0));
+static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
 //------------------------------------------------------------------------------
 
@@ -70,7 +73,7 @@ static int configure_watchdog(void)
 		return -ENODEV;
 	}
 
-	struct wdt_timeout_cfg wdt_config = 
+	struct wdt_timeout_cfg wdt_config =
 	{
 		.window.min = 0,
 		.window.max = WDT_TIMEOUT_MS,
@@ -93,7 +96,56 @@ static int configure_watchdog(void)
 	}
 
 	return wdt_channel_id;
-}	
+}
+
+static int configure_adc(struct adc_sequence *adc_sequence)
+{
+	if (!adc_is_ready_dt(&adc_channel))
+	{
+		LOG_ERR("ADC controller devivce %s not ready", adc_channel.dev->name);
+		return 0;
+	}
+
+	int err = adc_channel_setup_dt(&adc_channel);
+	if (err < 0)
+	{
+		LOG_ERR("Could not setup channel #%d (%d)", 0, err);
+		return 0;
+	}
+
+	err = adc_sequence_init_dt(&adc_channel, adc_sequence);
+	if (err < 0)
+	{
+		LOG_ERR("Could not initalize sequnce");
+		return 0;
+	}
+
+	return 0;
+}
+
+static int read_adc(struct adc_sequence *adc_sequence, int16_t *val)
+{
+	int err = adc_read(adc_channel.dev, adc_sequence);
+	if (err < 0)
+	{
+		LOG_ERR("Could not read (%d)", err);
+		return err;
+	}
+
+	int val_mv = (int)*val;
+	err = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
+	if (err < 0)
+	{
+		LOG_WRN(" (value in mV not available)\n");
+	}
+	else
+	{
+		LOG_INF(" = %d mV", val_mv);
+		*val = (int16_t)val_mv;
+	}
+
+	return 0;
+}
 
 static void app_ble_connection_state_cb(bool connected)
 {
@@ -136,13 +188,22 @@ int main(void)
 		return wdt_channel_id;
 	}
 
-	int ret = ui_manager_init();
+	int16_t val = 0;
+	struct adc_sequence adc_sequence = {.buffer = &val, .buffer_size = sizeof(val)};
+	int ret = configure_adc(&adc_sequence);
+	if (ret < 0)
+	{
+		LOG_ERR("ADC configuration failed, err: %d", ret);
+		return ret;
+	}
+
+	ret = ui_manager_init();
 	if (ret < 0)
 	{
 		LOG_ERR("UI Manager initialization failed: %d", ret);
 		return ret;
 	}
-	
+
 	ret = env_manager_init();
 	if (ret < 0)
 	{
@@ -167,29 +228,33 @@ int main(void)
 	}
 
 	k_tid_t my_tid = k_thread_create(&ui_manager_thread_data, ui_manager_stack_area,
-                                 K_THREAD_STACK_SIZEOF(ui_manager_stack_area),
-                                 ui_manager_thread_func,
-                                 NULL, NULL, NULL,
-                                 UI_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+									 K_THREAD_STACK_SIZEOF(ui_manager_stack_area),
+									 ui_manager_thread_func,
+									 NULL, NULL, NULL,
+									 UI_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	LOG_INF("UI Manager thread created with ID %d", (int)my_tid);
 
 	k_tid_t env_tid = k_thread_create(&env_manager_thread_data, env_manager_stack_area,
-								 K_THREAD_STACK_SIZEOF(env_manager_stack_area),
-								 env_manager_thread_func,
-								 NULL, NULL, NULL,
-								 ENV_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+									  K_THREAD_STACK_SIZEOF(env_manager_stack_area),
+									  env_manager_thread_func,
+									  NULL, NULL, NULL,
+									  ENV_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	LOG_INF("Environment Manager thread created with ID %d", (int)env_tid);
 
 	while (1)
 	{
+		wdt_feed(wdt, wdt_channel_id);
 
+		int err = read_adc(&adc_sequence, &val);
+		if (err < 0)
+		{
+			LOG_ERR("ADC read failed, err: %d", err);
+		}
 
 		int env_lb_service_send_sensor_notify(uint32_t sensor_value);
-		env_lb_service_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
-
-		wdt_feed(wdt, wdt_channel_id);
+		env_lb_service_send_sensor_notify(val);
 
 		k_msleep(SLEEP_TIME_MS);
 	}

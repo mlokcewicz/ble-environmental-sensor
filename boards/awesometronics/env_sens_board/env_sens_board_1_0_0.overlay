@@ -27,11 +27,29 @@
 		led-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
 		blink-period-ms = <1000>;
 	};
+
+	zephyr,user {
+		io-channels = <&adc 0>;
+	};
 };
 
 &i2c0 {	status = "disabled";};
 &spi0 {	status = "disabled";};
 &i2c1 {	status = "disabled";};
+
+&adc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_VDD>; 
+		zephyr,resolution = <12>;
+	};
+};
 	
 &spi1 {
     compatible = "nordic,nrf-spi"; //using SPI as per ERRATA 58
