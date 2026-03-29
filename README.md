@@ -6,7 +6,9 @@ BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52
 
 - Temperature, humidity and pressure measurements sending to central by notifications via custom BLE service 
 - Nordic Led Button Service handling for user-defined purposes
-- Supply voltage measurement and sending via Nordic Battery Service
+- Supply voltage measurement and sending via Battery Service
+- DFU over BLE enabled via SMP Service
+- Sampling interval configuration
 - Pairing with encryption and authentication and bonding with filer accept list handling
 - Up to 2 paired devices handling, ability to reset bonded list and enter pairing mode
 - DFU over BLE and Serial Recovery in MCUboot (used as immutable bootloader)
