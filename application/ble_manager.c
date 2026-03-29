@@ -136,7 +136,7 @@ static void adv_work_handler(struct k_work *work)
 
         pairing_mode = false;
 
-        int ret = bt_le_adv_start(BT_LE_ADV_CONN_NORMAL, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+        ret = bt_le_adv_start(BT_LE_ADV_CONN_NORMAL, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
         if (ret)
         {
             LOG_INF("Advertising failed to start (err %d)\n", ret);

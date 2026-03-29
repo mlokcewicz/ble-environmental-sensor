@@ -189,8 +189,6 @@ int main(void)
 		int env_lb_service_send_sensor_notify(uint32_t sensor_value);
 		env_lb_service_send_sensor_notify(k_uptime_get_32() / 1000); // Send uptime in seconds as sensor value
 
-
-
 		wdt_feed(wdt, wdt_channel_id);
 
 		k_msleep(SLEEP_TIME_MS);
