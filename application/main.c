@@ -253,8 +253,8 @@ int main(void)
 			LOG_ERR("ADC read failed, err: %d", err);
 		}
 
-		int lb_service_send_sensor_notify(uint32_t sensor_value);
-		lb_service_send_sensor_notify(val);
+		int battery_service_send_battery_notify(uint8_t battery_level);
+		battery_service_send_battery_notify(69); // Placeholder value for battery level
 
 
 		k_msleep(SLEEP_TIME_MS);

@@ -14,10 +14,14 @@ extern "C" {
 
 //------------------------------------------------------------------------------
 
+#include <stdbool.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#include <stdbool.h>
+#include <services/lb_service.h>
+#include <services/thp_service.h>
+#include <services/battery_service.h>
 
 //------------------------------------------------------------------------------
 

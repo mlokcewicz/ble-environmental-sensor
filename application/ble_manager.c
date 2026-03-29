@@ -18,9 +18,6 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
 
-#include <services/lb_service.h>
-#include <services/thp_service.h>
-
 //------------------------------------------------------------------------------
 
 #define DEVICE_NAME "Env_Sensor"
@@ -55,7 +52,11 @@ static const struct bt_data ad[] =
 // Scan response data - maximum 31 bytes for legacy advertising
 static const struct bt_data sd[] = 
 {
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)), // LBS UUID
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, 
+        BT_UUID_LBS_VAL, // LBS UUID
+        // BT_UUID_THP_VAL,  // THP UUID
+        //  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL), // Battery Service UUID
+        ),
 };
 
 static struct bt_conn *my_conn = NULL;
