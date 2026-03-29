@@ -1,15 +1,16 @@
 # ble-environmental-sensor 
 
-BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52832 MCU and BME280 sensor.
+BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52832 MCU, MX25R64 flash and BME280 sensor.
 
 ## Capabilities
 
 - Temperature, humidity and pressure measurements sent to central by notifications 
-- Led and button handling for user-defined purposes
+- Nordic Led Button Service handling for user-defined purposes
 - Custom BLE service including suitable characteristics
 - Pairing with encryption and authentication and bonding with filer accept list handling
-- Up to 5 paired devices handling, ability to reset bonded list and enter pairing mode
-- DFU over BLE support
+- Up to 2 paired devices handling, ability to reset bonded list and enter pairing mode
+- DFU over BLE and Serial Recovery in MCUboot (used as immutable bootloader)
+- External SPI NOR flash for the secondary slot
 
 ## Tools
 
