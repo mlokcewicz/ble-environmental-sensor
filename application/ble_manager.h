@@ -24,14 +24,17 @@ extern "C" {
 typedef void (*ble_manager_connection_state_cb)(bool connected);
 typedef void (*ble_manager_led_set_cb)(const bool led_state);
 typedef bool (*ble_manager_button_get_cb)(void);
+
 typedef uint32_t (*ble_manager_sampling_interval_get_cb_t)(void);
 typedef void (*ble_manager_sampling_interval_set_cb_t)(uint32_t sampling_interval_ms);
 
 struct ble_manager_cfg
 {
     ble_manager_connection_state_cb connection_state_cb;
+
     ble_manager_led_set_cb led_set_cb;
     ble_manager_button_get_cb button_get_cb;
+
     ble_manager_sampling_interval_get_cb_t sampling_interval_get_cb;
     ble_manager_sampling_interval_set_cb_t sampling_interval_set_cb;
 };

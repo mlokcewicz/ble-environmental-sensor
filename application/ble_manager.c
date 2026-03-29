@@ -19,6 +19,7 @@
 #include <zephyr/bluetooth/addr.h>
 
 #include <services/lb_service.h>
+#include <services/thp_service.h>
 
 //------------------------------------------------------------------------------
 
@@ -430,14 +431,25 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
     {
         .led_set_cb = cfg->led_set_cb,
         .button_get_cb = cfg->button_get_cb,
-        .sampling_interval_get_cb = cfg->sampling_interval_get_cb,
-        .sampling_interval_set_cb = cfg->sampling_interval_set_cb,
     };
 
     ret = lb_service_init(&lbs_callbacks);
     if (ret < 0)
     {
-        LOG_ERR("Failed to initialize My LBS Service (err %d)", ret);
+        LOG_ERR("Failed to initialize LB Service (err %d)", ret);
+        return ret;
+    }
+
+    struct thp_service_cb thp_callbacks = 
+    {
+        .sampling_interval_get_cb = cfg->sampling_interval_get_cb,
+        .sampling_interval_set_cb = cfg->sampling_interval_set_cb,
+    };
+
+    ret = thp_service_init(&thp_callbacks);
+    if (ret < 0)   
+    {
+        LOG_ERR("Failed to initialize THP Service (err %d)", ret);
         return ret;
     }
 

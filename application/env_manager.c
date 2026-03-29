@@ -50,21 +50,27 @@ int env_manager_process(void)
         return -1;
     }
 
-    if (sensor_channel_get(bme280_dev, SENSOR_CHAN_PRESS, &press_val))
-    {
-        LOG_ERR("Could not get sample");
-        return -1;
-    }
-
     if (sensor_channel_get(bme280_dev, SENSOR_CHAN_HUMIDITY, &hum_val))
     {
         LOG_ERR("Could not get sample");
         return -1;
     }
 
+    if (sensor_channel_get(bme280_dev, SENSOR_CHAN_PRESS, &press_val))
+    {
+        LOG_ERR("Could not get sample");
+        return -1;
+    }
+
+
     // LOG_INF("Compensated temperature value: %d", temp_val.val1);
-    // LOG_INF("Compensated pressure value: %d", press_val.val1);
     // LOG_INF("Compensated humidity value: %d", hum_val.val1);
+    // LOG_INF("Compensated pressure value: %d", press_val.val1);
+
+    int thp_service_send_sensor_notify(int, uint32_t sensor_value);
+    thp_service_send_sensor_notify(0, temp_val.val1);
+    thp_service_send_sensor_notify(1, hum_val.val1); 
+    thp_service_send_sensor_notify(2, press_val.val1);
 
     k_msleep(1000); // Add sampling interval
 
