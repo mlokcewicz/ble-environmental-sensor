@@ -51,7 +51,7 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		bool pressed = gpio_pin_get_dt(&lbs_sw);
 		button_state = pressed;
 
-		env_lb_service_send_button_state_indicate(pressed);
+		lb_service_send_button_state_indicate(pressed);
 	}	
 
 	if (pins & BIT(ble_unpair_sw.pin))

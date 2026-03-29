@@ -18,7 +18,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
 
-#include <services/env_lb_service.h>
+#include <services/lb_service.h>
 
 //------------------------------------------------------------------------------
 
@@ -426,7 +426,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
          return ret;
     }
 
-    struct env_lb_service_cb lbs_callbacks = 
+    struct lb_service_cb lbs_callbacks = 
     {
         .led_set_cb = cfg->led_set_cb,
         .button_get_cb = cfg->button_get_cb,
@@ -434,7 +434,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
         .sampling_interval_set_cb = cfg->sampling_interval_set_cb,
     };
 
-    ret = env_lb_service_init(&lbs_callbacks);
+    ret = lb_service_init(&lbs_callbacks);
     if (ret < 0)
     {
         LOG_ERR("Failed to initialize My LBS Service (err %d)", ret);

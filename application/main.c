@@ -253,8 +253,9 @@ int main(void)
 			LOG_ERR("ADC read failed, err: %d", err);
 		}
 
-		int env_lb_service_send_sensor_notify(uint32_t sensor_value);
-		env_lb_service_send_sensor_notify(val);
+		int lb_service_send_sensor_notify(uint32_t sensor_value);
+		lb_service_send_sensor_notify(val);
+
 
 		k_msleep(SLEEP_TIME_MS);
 	}
