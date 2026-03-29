@@ -24,7 +24,9 @@
 
 #define DEVICE_NAME "Env_Sensor"
 #define COMPANY_ID_CODE 0x0059 // Nordic Semiconductor ASA
-#define BT_LE_ADV_CONN_ACCEPT_LIST BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_FILTER_CONN, BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+
+#define BT_LE_ADV_CONN_NORMAL BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, CONFIG_CONNECTABLE_ADV_INTERVAL_MIN, CONFIG_CONNECTABLE_ADV_INTERVAL_MAX, NULL)
+#define BT_LE_ADV_CONN_ACCEPT_LIST BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_FILTER_CONN, CONFIG_CONNECTABLE_ADV_INTERVAL_MIN, CONFIG_CONNECTABLE_ADV_INTERVAL_MAX, NULL)
 
 //------------------------------------------------------------------------------
 
@@ -122,10 +124,10 @@ static void adv_work_handler(struct k_work *work)
 {
     if (pairing_mode == true)
     {
-        int err = bt_le_filter_accept_list_clear();
-        if (err)
+        int ret = bt_le_filter_accept_list_clear();
+        if (ret)
         {
-            LOG_INF("Cannot clear accept list (err: %d)\n", err);
+            LOG_INF("Cannot clear accept list (err: %d)\n", ret);
         }
         else
         {
@@ -133,11 +135,11 @@ static void adv_work_handler(struct k_work *work)
         }
 
         pairing_mode = false;
-        
-        err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-        if (err)
+
+        int ret = bt_le_adv_start(BT_LE_ADV_CONN_NORMAL, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+        if (ret)
         {
-            LOG_INF("Advertising failed to start (err %d)\n", err);
+            LOG_INF("Advertising failed to start (err %d)\n", ret);
             return;
         }
         
@@ -156,7 +158,7 @@ static void adv_work_handler(struct k_work *work)
         if (allowed_cnt == 0)
         {
             LOG_INF("Advertising with no Accept list \n");
-            ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+            ret = bt_le_adv_start(BT_LE_ADV_CONN_NORMAL, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
         }
         else
         {

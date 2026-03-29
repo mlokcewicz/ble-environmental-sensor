@@ -1,0 +1,13 @@
+source "Kconfig.zephyr"
+
+config CONNECTABLE_ADV_INTERVAL_MIN
+	int "Connectable advertising interval minimum"
+	default 160
+    help
+      This option sets the minimum advertising interval for connectable advertising. The value is specified in units of 0.625 ms, so a value of 160 corresponds to an interval of 100 ms. Setting this value allows you to control how frequently the device advertises when it is in a connectable state, which can impact power consumption and responsiveness to connection requests.
+
+config CONNECTABLE_ADV_INTERVAL_MAX
+	int "Connectable advertising interval maximum"
+	default 240  
+    help
+      This option sets the maximum advertising interval for connectable advertising. The value is specified in units of 0.625 ms, so a value of 240 corresponds to an interval of 150 ms. Setting this value allows you to control how frequently the device advertises when it is in a connectable state, which can impact power consumption and responsiveness to connection requests.
