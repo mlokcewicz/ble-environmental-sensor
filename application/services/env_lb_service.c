@@ -37,7 +37,7 @@ struct env_lb_service_ctx
 
 //------------------------------------------------------------------------------
 
-LOG_MODULE_DECLARE(env_lb_service);
+LOG_MODULE_REGISTER(env_lb_service);
 
 static struct env_lb_service_ctx ctx;
 
