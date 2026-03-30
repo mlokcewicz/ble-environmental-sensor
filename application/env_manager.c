@@ -63,14 +63,18 @@ int env_manager_process(void)
     }
 
 
-    // LOG_INF("Compensated temperature value: %d", temp_val.val1);
-    // LOG_INF("Compensated humidity value: %d", hum_val.val1);
-    // LOG_INF("Compensated pressure value: %d", press_val.val1);
+    LOG_INF("Compensated temperature value: %d.%d", temp_val.val1, temp_val.val2);
+    LOG_INF("Compensated humidity value: %d.%d", hum_val.val1, hum_val.val2);
+    LOG_INF("Compensated pressure value: %d.%d", press_val.val1, press_val.val2);
+
+    uint16_t temp_celsius_exp1 = temp_val.val1 * 10 + (temp_val.val2 / 100000);
+    uint16_t humidity_percent_exp1 = hum_val.val1 * 10 + (hum_val.val2 / 100000);
+    uint16_t pressure_hpa_exp1 = press_val.val1 * 100 + (press_val.val2 / 10000);
 
     int thp_service_send_sensor_notify(int, uint32_t sensor_value);
-    thp_service_send_sensor_notify(0, temp_val.val1);
-    thp_service_send_sensor_notify(1, hum_val.val1); 
-    thp_service_send_sensor_notify(2, press_val.val1);
+    thp_service_send_sensor_notify(0, temp_celsius_exp1);
+    thp_service_send_sensor_notify(1, humidity_percent_exp1); 
+    thp_service_send_sensor_notify(2, pressure_hpa_exp1);
 
     k_msleep(1000); // Add sampling interval
 

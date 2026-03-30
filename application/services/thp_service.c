@@ -112,21 +112,66 @@ static ssize_t write_sampling_interval(struct bt_conn *conn, const struct bt_gat
 
 //------------------------------------------------------------------------------
 
+static const struct bt_gatt_cpf temp_cpf =
+{
+    .format = 0x0E,   /* sint16 */
+    .exponent = -1,   /* value * 10^-1, np. 253 -> 25.3 */
+    .unit = 0x272F,   /* degree Celsius */
+    .name_space = 1,  /* Bluetooth SIG */
+    .description = 0,
+};
+
+static const struct bt_gatt_cpf humidity_cpf =
+{
+    .format = 0x0E,   // sint16
+    .exponent = -1,   // 0.1 %
+    .unit = 0x27AD,   // percentage
+    .name_space = 1,
+    .description = 0,
+};
+
+
+static const struct bt_gatt_cpf pressure_cpf =
+{
+    .format = 0x0E,   // sint16
+    .exponent = 1,    // value in hPa
+    .unit = 0x2724,   // Pascal
+    .name_space = 1,
+    .description = 0,
+};
+
+static const struct bt_gatt_cpf sampling_interval_cpf =
+{
+    .format = 0x08,     // uint32
+    .exponent = -3, 	// value in ms
+    .unit = 0x2703,     // second
+    .name_space = 1,
+    .description = 0,
+};
+
 /* LED Button Service Declaration - Create and add the MY THP service to the Bluetooth LE stack */
 BT_GATT_SERVICE_DEFINE
 (   
-    thp_svc,
+	thp_svc,
     BT_GATT_PRIMARY_SERVICE(BT_UUID_THP),
     BT_GATT_CHARACTERISTIC(BT_UUID_THP_TEMP, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
 	BT_GATT_CUD("Temperature in Celsius", BT_GATT_PERM_READ),
-    BT_GATT_CCC(mythpbc_ccc_temp_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE), 
+	BT_GATT_CPF(&temp_cpf),	
+    BT_GATT_CCC(mythpbc_ccc_temp_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	 
     BT_GATT_CHARACTERISTIC(BT_UUID_THP_HUMIDITY, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
 	BT_GATT_CUD("Humidity in Percent", BT_GATT_PERM_READ),
+	BT_GATT_CPF(&humidity_cpf),
 	BT_GATT_CCC(mythpbc_ccc_humidity_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE), 
+	
     BT_GATT_CHARACTERISTIC(BT_UUID_THP_PRESSURE, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
-	BT_GATT_CUD("Pressure in hPa", BT_GATT_PERM_READ),
+	BT_GATT_CUD("Pressure in Pa", BT_GATT_PERM_READ),
+	BT_GATT_CPF(&pressure_cpf),
     BT_GATT_CCC(mythpbc_ccc_pressure_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE), 
+	
 	BT_GATT_CHARACTERISTIC(BT_UUID_THP_SAMPLING_INTERVAL, BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE_AUTHEN, read_sampling_interval, write_sampling_interval, &ctx.sampling_interval_ms),
+	BT_GATT_CUD("Sampling Interval in ms", BT_GATT_PERM_READ),
+	BT_GATT_CPF(&sampling_interval_cpf),
 );
 
 //------------------------------------------------------------------------------
@@ -151,17 +196,17 @@ int thp_service_send_sensor_notify(enum thp_service_sensor_type sensor_type, uin
 		return -EINVAL;
 	}
 
-	if (!ctx.notify_enabled[sensor_type]) 
+	if (!ctx.notify_enabled[sensor_type])
 		return -EACCES;
 
-	int attr_idx[] = 
+	const struct bt_uuid *thp_sensor_uuids[] =
 	{
-		[THP_SENSOR_TYPE_TEMP] = 1,
-		[THP_SENSOR_TYPE_HUMIDITY] = 4,
-		[THP_SENSOR_TYPE_PRESSURE] = 7,
+		[THP_SENSOR_TYPE_TEMP] = BT_UUID_THP_TEMP,
+		[THP_SENSOR_TYPE_HUMIDITY] = BT_UUID_THP_HUMIDITY,
+		[THP_SENSOR_TYPE_PRESSURE] = BT_UUID_THP_PRESSURE,
 	};
 
-	return bt_gatt_notify(NULL, &thp_svc.attrs[attr_idx[sensor_type]], &sensor_value, sizeof(sensor_value));
+	return bt_gatt_notify_uuid(NULL, thp_sensor_uuids[sensor_type], &thp_svc.attrs[0], &sensor_value, sizeof(sensor_value));
 }
 
 //------------------------------------------------------------------------------
