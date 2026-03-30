@@ -22,6 +22,8 @@ LOG_MODULE_REGISTER(main);
 
 #define SLEEP_TIME_MS 1000
 #define WDT_TIMEOUT_MS 2000
+#define COIN_CELL_MIN_VOLTAGE_MV 2000
+#define COIN_CELL_MAX_VOLTAGE_MV 3200
 
 //------------------------------------------------------------------------------
 /* Threads definitions */
@@ -98,7 +100,7 @@ static int configure_watchdog(void)
 	return wdt_channel_id;
 }
 
-static int configure_adc(struct adc_sequence *adc_sequence)
+static int configure_battery_monitor(struct adc_sequence *adc_sequence)
 {
 	if (!adc_is_ready_dt(&adc_channel))
 	{
@@ -123,7 +125,7 @@ static int configure_adc(struct adc_sequence *adc_sequence)
 	return 0;
 }
 
-static int read_adc(struct adc_sequence *adc_sequence, int16_t *val)
+static int read_battery_monitor_level(struct adc_sequence *adc_sequence, int16_t *val)
 {
 	int err = adc_read(adc_channel.dev, adc_sequence);
 	if (err < 0)
@@ -141,8 +143,15 @@ static int read_adc(struct adc_sequence *adc_sequence, int16_t *val)
 	else
 	{
 		LOG_INF(" = %d mV", val_mv);
-		*val = (int16_t)val_mv;
 	}
+
+	uint8_t percentage = 0;
+	
+	if (val_mv <= COIN_CELL_MIN_VOLTAGE_MV) percentage = 0;
+	else if (val_mv >= COIN_CELL_MAX_VOLTAGE_MV) percentage = 100;
+	else percentage = (uint8_t)(((val_mv - COIN_CELL_MIN_VOLTAGE_MV) * 100) / (COIN_CELL_MAX_VOLTAGE_MV - COIN_CELL_MIN_VOLTAGE_MV));
+
+	*val = percentage;
 
 	return 0;
 }
@@ -190,7 +199,7 @@ int main(void)
 
 	int16_t val = 0;
 	struct adc_sequence adc_sequence = {.buffer = &val, .buffer_size = sizeof(val)};
-	int ret = configure_adc(&adc_sequence);
+	int ret = configure_battery_monitor(&adc_sequence);
 	if (ret < 0)
 	{
 		LOG_ERR("ADC configuration failed, err: %d", ret);
@@ -247,14 +256,14 @@ int main(void)
 	{
 		wdt_feed(wdt, wdt_channel_id);
 
-		int err = read_adc(&adc_sequence, &val);
+		int err = read_battery_monitor_level(&adc_sequence, &val);
 		if (err < 0)
 		{
 			LOG_ERR("ADC read failed, err: %d", err);
 		}
 
 		int battery_service_send_battery_notify(uint8_t battery_level);
-		battery_service_send_battery_notify(69); // Placeholder value for battery level
+		battery_service_send_battery_notify(val); // Placeholder value for battery level
 
 
 		k_msleep(SLEEP_TIME_MS);
