@@ -11,3 +11,16 @@ config CONNECTABLE_ADV_INTERVAL_MAX
 	default 240  
     help
       This option sets the maximum advertising interval for connectable advertising. The value is specified in units of 0.625 ms, so a value of 240 corresponds to an interval of 150 ms. Setting this value allows you to control how frequently the device advertises when it is in a connectable state, which can impact power consumption and responsiveness to connection requests.
+
+config SYSTEM_STATS
+	bool "Enable application debug stats"
+	select THREAD_MONITOR
+	select THREAD_STACK_INFO
+	select INIT_STACKS
+	select CPU_LOAD
+  select SYS_HEAP_RUNTIME_STATS
+  select HEAP_MEM_POOL_STATS
+
+	help
+	  Enables thread stack statistics, heap statistics and CPU load
+	  measurement for debug builds.

@@ -12,6 +12,8 @@
 
 #include <zephyr/drivers/adc.h>
 
+#include <system_stats.h>
+
 #include <ble_manager.h>
 #include <ui_manager.h>
 #include <env_manager.h>
@@ -146,7 +148,7 @@ static int read_battery_monitor_level(struct adc_sequence *adc_sequence, int16_t
 	}
 
 	uint8_t percentage = 0;
-	
+
 	if (val_mv <= COIN_CELL_MIN_VOLTAGE_MV) percentage = 0;
 	else if (val_mv >= COIN_CELL_MAX_VOLTAGE_MV) percentage = 100;
 	else percentage = (uint8_t)(((val_mv - COIN_CELL_MIN_VOLTAGE_MV) * 100) / (COIN_CELL_MAX_VOLTAGE_MV - COIN_CELL_MIN_VOLTAGE_MV));
@@ -236,19 +238,23 @@ int main(void)
 		return ret;
 	}
 
-	k_tid_t my_tid = k_thread_create(&ui_manager_thread_data, ui_manager_stack_area,
+	k_tid_t ui_tid = k_thread_create(&ui_manager_thread_data, ui_manager_stack_area,
 									 K_THREAD_STACK_SIZEOF(ui_manager_stack_area),
 									 ui_manager_thread_func,
 									 NULL, NULL, NULL,
 									 UI_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+	
+	k_thread_name_set(ui_tid, "ui");
 
-	LOG_INF("UI Manager thread created with ID %d", (int)my_tid);
+	LOG_INF("UI Manager thread created with ID %d", (int)ui_tid);
 
 	k_tid_t env_tid = k_thread_create(&env_manager_thread_data, env_manager_stack_area,
 									  K_THREAD_STACK_SIZEOF(env_manager_stack_area),
 									  env_manager_thread_func,
 									  NULL, NULL, NULL,
 									  ENV_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+
+	k_thread_name_set(env_tid, "env");
 
 	LOG_INF("Environment Manager thread created with ID %d", (int)env_tid);
 
@@ -264,6 +270,10 @@ int main(void)
 
 		int battery_service_send_battery_notify(uint8_t battery_level);
 		battery_service_send_battery_notify(val); // Placeholder value for battery level
+
+#ifdef CONFIG_SYSTEM_STATS
+		system_stats_print();
+#endif
 
 
 		k_msleep(SLEEP_TIME_MS);

@@ -8,6 +8,8 @@ target_sources(app PRIVATE services/lb_service.c)
 target_sources(app PRIVATE services/thp_service.c)
 target_sources(app PRIVATE services/battery_service.c)
 
+target_sources_ifdef(CONFIG_SYSTEM_STATS app PRIVATE system_stats.c)
+
 target_include_directories(app PRIVATE .)
 target_include_directories(app PRIVATE services)
 
