@@ -471,7 +471,7 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
 
     LOG_INF("Bluetooth initialized");
 
-    settings_load();
+    settings_load_subtree("bt");
 
     advertising_start();
 

@@ -178,11 +178,26 @@ static void app_lbs_led_cb(const bool led_state)
 
 static uint32_t app_sampling_interval_get_cb(void)
 {
-	return 1000; // Return a default sampling interval of 1000 ms
+	uint32_t sampling_interval_ms = 0;
+	int ret = env_manager_sampling_interval_get(&sampling_interval_ms);
+	if (ret < 0)
+	{
+		LOG_ERR("Failed to get sampling interval from Environment Manager (err %d)", ret);
+		return 0;
+	}
+
+	return sampling_interval_ms;
 }
 
 static void app_sampling_interval_set_cb(uint32_t sampling_interval_ms)
 {
+	int ret = env_manager_sampling_interval_set(sampling_interval_ms);
+	if (ret < 0)
+	{
+		LOG_ERR("Failed to set sampling interval in Environment Manager (err %d)", ret);
+		return;
+	}
+
 	LOG_INF("Sampling interval updated to %d ms", sampling_interval_ms);
 }
 
