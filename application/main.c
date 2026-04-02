@@ -14,6 +14,8 @@
 
 #include <system_stats.h>
 
+#include <app_event.h>
+
 #include <ble_manager.h>
 #include <ui_manager.h>
 #include <env_manager.h>
@@ -251,14 +253,19 @@ int main(void)
 	{
 		wdt_feed(wdt, wdt_channel_id);
 
-		int err = read_battery_monitor_level(&adc_sequence, &val);
-		if (err < 0)
+		int ret = read_battery_monitor_level(&adc_sequence, &val);
+		if (ret < 0)
 		{
-			LOG_ERR("ADC read failed, err: %d", err);
+			LOG_ERR("ADC read failed, err: %d", ret);
 		}
+	
+		struct app_event event = {.type = APP_EVENT_BATTERY_LEVEL_IND, .battery_level = (uint8_t)val};
 
-		int battery_service_send_battery_notify(uint8_t battery_level);
-		battery_service_send_battery_notify(val); // Placeholder value for battery level
+		ret = zbus_chan_pub(&ble_control_chan, &event, K_MSEC(10));
+		if (ret < 0)
+		{
+			LOG_ERR("Failed to publish battery level ind event (err %d)", ret);
+		}
 
 #ifdef CONFIG_SYSTEM_STATS
 		system_stats_print();

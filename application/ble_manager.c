@@ -45,6 +45,7 @@ typedef struct adv_mfg_data
 LOG_MODULE_REGISTER(ble_manager, LOG_LEVEL_INF);
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(ble_manager_sub); 
+ZBUS_CHAN_ADD_OBS(ble_control_chan, ble_manager_sub, 0);
 
 // Advertising custom data - manufacturer specific data
 static adv_mfg_data_t adv_mfg_data = {COMPANY_ID_CODE, 0x00};
@@ -337,7 +338,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
     update_data_length(my_conn);
     update_mtu(my_conn);
 
-    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_CHANGED, .ble_connected = true};
+    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_IND, .ble_connected = true};
 
     ret = zbus_chan_pub(&ui_control_chan, &event, K_MSEC(10));
     if (ret < 0)
@@ -352,7 +353,7 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 
     bt_conn_unref(my_conn);
 
-    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_CHANGED, .ble_connected = false};
+    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_IND, .ble_connected = false};
 
     int ret = zbus_chan_pub(&ui_control_chan, &event, K_MSEC(10));
     if (ret < 0)
@@ -577,7 +578,7 @@ int ble_manager_process(void)
         {
             switch (event.type)
             {
-                case APP_EVENT_LBS_BUTTON_STATE_CHANGED:
+                case APP_EVENT_LBS_BUTTON_STATE_IND:
                     lbs_button_state = event.button_state;
                     lb_service_send_button_state_indicate(event.button_state);
                     break;
@@ -590,6 +591,9 @@ int ble_manager_process(void)
                 case APP_EVENT_SAMPLING_INTERVAL_SET_REQ:
                     sampling_interval_ms = (event.sampling_interval_ms);
                     break;
+                case APP_EVENT_BATTERY_LEVEL_IND:
+                    battery_service_send_battery_notify(event.battery_level);
+                    break;
 
                 default:
                     break;
@@ -597,7 +601,7 @@ int ble_manager_process(void)
         }
 
         ret = k_msgq_get(&sensor_event_queue, &event, K_MSEC(10));
-        if (ret == 0 && event.type == APP_EVENT_SENSOR_DATA_UPDATE)
+        if (ret == 0 && event.type == APP_EVENT_SENSOR_DATA_IND)
         {
             thp_service_send_sensor_notify(THP_SENSOR_TYPE_TEMP, event.sensor_data.temp_celsius_exp1);
             thp_service_send_sensor_notify(THP_SENSOR_TYPE_HUMIDITY, event.sensor_data.humidity_percent_exp1); 

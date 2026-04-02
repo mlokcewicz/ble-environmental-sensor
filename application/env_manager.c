@@ -25,6 +25,7 @@
 LOG_MODULE_REGISTER(env_manager);
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(env_manager_sub); 
+ZBUS_CHAN_ADD_OBS(env_control_chan, env_manager_sub, 0);
 
 struct env_manager_ctx 
 {
@@ -147,7 +148,7 @@ int env_manager_process(void)
 
         struct app_event event =
         {
-            .type = APP_EVENT_SENSOR_DATA_UPDATE,
+            .type = APP_EVENT_SENSOR_DATA_IND,
             .sensor_data =
             {
                 .temp_celsius_exp1 = temp_celsius_exp1,

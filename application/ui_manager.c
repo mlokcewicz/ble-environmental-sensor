@@ -31,6 +31,7 @@
 LOG_MODULE_REGISTER(ui_manager);
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(ui_manager_sub); 
+ZBUS_CHAN_ADD_OBS(ui_control_chan, ui_manager_sub, 0);
 
 static const struct gpio_dt_spec ble_conn_led = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
 static const struct gpio_dt_spec lbs_led = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
@@ -57,7 +58,7 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		bool pressed = gpio_pin_get_dt(&lbs_sw);
 		button_state = pressed;
 
-		event.type = APP_EVENT_LBS_BUTTON_STATE_CHANGED;
+		event.type = APP_EVENT_LBS_BUTTON_STATE_IND;
 		event.button_state = pressed;
 		int ret = zbus_chan_pub(&ble_control_chan, &event, K_MSEC(10));
 		if (ret < 0)
@@ -215,7 +216,7 @@ int ui_manager_process(void)
 		{
 			switch (event.type)
 			{
-			case APP_EVENT_BLE_CONNECTION_STATE_CHANGED:
+			case APP_EVENT_BLE_CONNECTION_STATE_IND:
 				set_conn_state_led(event.ble_connected);
 				break;
 
