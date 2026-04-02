@@ -30,17 +30,31 @@ LOG_MODULE_REGISTER(main);
 //------------------------------------------------------------------------------
 /* Threads definitions */
 
-#define UI_MANAGER_THREAD_STACK_SIZE 2048
-#define ENV_MANAGER_THREAD_STACK_SIZE 2048
+#define BLE_MANAGER_THREAD_STACK_SIZE 1024
+#define UI_MANAGER_THREAD_STACK_SIZE 1024
+#define ENV_MANAGER_THREAD_STACK_SIZE 1024
 
+#define BLE_MANAGER_THREAD_PRIORITY 5
 #define ENV_MANAGER_THREAD_PRIORITY 5
 #define UI_MANAGER_THREAD_PRIORITY 5
 
+K_THREAD_STACK_DEFINE(ble_manager_stack_area, BLE_MANAGER_THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(ui_manager_stack_area, UI_MANAGER_THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(env_manager_stack_area, ENV_MANAGER_THREAD_STACK_SIZE);
 
+static struct k_thread ble_manager_thread_data;
 static struct k_thread ui_manager_thread_data;
 static struct k_thread env_manager_thread_data;
+
+static void ble_manager_thread_func(void *unused1, void *unused2, void *unused3)
+{
+	LOG_INF("BLE Manager thread started");
+
+	while (1)
+	{
+		ble_manager_process();
+	}
+}
 
 static void ui_manager_thread_func(void *unused1, void *unused2, void *unused3)
 {
@@ -158,48 +172,7 @@ static int read_battery_monitor_level(struct adc_sequence *adc_sequence, int16_t
 	return 0;
 }
 
-static void app_ble_connection_state_cb(bool connected)
-{
-	// gpio_pin_set_dt(&led2, connected);
-	void remove_me_set_ui_conn(bool connected);
-	remove_me_set_ui_conn(connected);
-}
 
-static bool app_lbs_button_cb(void)
-{
-	// return button_state;
-	return false;
-}
-
-static void app_lbs_led_cb(const bool led_state)
-{
-	// gpio_pin_set_dt(&led3, led_state);
-}
-
-static uint32_t app_sampling_interval_get_cb(void)
-{
-	uint32_t sampling_interval_ms = 0;
-	int ret = env_manager_sampling_interval_get(&sampling_interval_ms);
-	if (ret < 0)
-	{
-		LOG_ERR("Failed to get sampling interval from Environment Manager (err %d)", ret);
-		return 0;
-	}
-
-	return sampling_interval_ms;
-}
-
-static void app_sampling_interval_set_cb(uint32_t sampling_interval_ms)
-{
-	int ret = env_manager_sampling_interval_set(sampling_interval_ms);
-	if (ret < 0)
-	{
-		LOG_ERR("Failed to set sampling interval in Environment Manager (err %d)", ret);
-		return;
-	}
-
-	LOG_INF("Sampling interval updated to %d ms", sampling_interval_ms);
-}
 
 //------------------------------------------------------------------------------
 
@@ -236,17 +209,8 @@ int main(void)
 		LOG_ERR("Environment Manager initialization failed: %d", ret);
 		return ret;
 	}
-
-	struct ble_manager_cfg ble_manager_cfg = 
-	{
-		.connection_state_cb = app_ble_connection_state_cb,
-		.led_set_cb = app_lbs_led_cb,
-		.button_get_cb = app_lbs_button_cb,
-		.sampling_interval_get_cb = app_sampling_interval_get_cb,
-		.sampling_interval_set_cb = app_sampling_interval_set_cb,
-	};
-
-	ret = ble_manager_init(&ble_manager_cfg);
+	
+	ret = ble_manager_init();
 	if (ret < 0)
 	{
 		LOG_ERR("BLE Manager initialization failed (err %d)", ret);
@@ -273,6 +237,16 @@ int main(void)
 
 	LOG_INF("Environment Manager thread created with ID %d", (int)env_tid);
 
+	k_tid_t ble_tid = k_thread_create(&ble_manager_thread_data, ble_manager_stack_area,
+									  K_THREAD_STACK_SIZEOF(ble_manager_stack_area),
+									  ble_manager_thread_func,
+									  NULL, NULL, NULL,
+									  BLE_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+
+	k_thread_name_set(ble_tid, "ble");
+
+	LOG_INF("BLE Manager thread created with ID %d", (int)ble_tid);
+ 
 	while (1)
 	{
 		wdt_feed(wdt, wdt_channel_id);
@@ -289,7 +263,6 @@ int main(void)
 #ifdef CONFIG_SYSTEM_STATS
 		system_stats_print();
 #endif
-
 
 		k_msleep(SLEEP_TIME_MS);
 	}

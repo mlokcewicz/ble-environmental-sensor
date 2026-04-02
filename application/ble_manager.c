@@ -7,6 +7,8 @@
 
 #include "ble_manager.h"
 
+#include <app_event.h>
+
 #include <zephyr/settings/settings.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -17,6 +19,10 @@
 
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
+
+#include <lb_service.h>
+#include <thp_service.h>
+#include <battery_service.h>
 
 //------------------------------------------------------------------------------
 
@@ -37,6 +43,8 @@ typedef struct adv_mfg_data
 //------------------------------------------------------------------------------
 
 LOG_MODULE_REGISTER(ble_manager, LOG_LEVEL_INF);
+
+ZBUS_MSG_SUBSCRIBER_DEFINE(ble_manager_sub); 
 
 // Advertising custom data - manufacturer specific data
 static adv_mfg_data_t adv_mfg_data = {COMPANY_ID_CODE, 0x00};
@@ -67,8 +75,9 @@ static struct k_work adv_work;
 static struct k_work unpair_work;
 static struct k_work pairing_mode_work;
 
-static ble_manager_connection_state_cb connection_state_callback = NULL;
 static bool pairing_mode = false;
+static bool lbs_button_state = false;
+uint32_t sampling_interval_ms = 0;
 
 //------------------------------------------------------------------------------
 
@@ -261,6 +270,30 @@ static void update_mtu(struct bt_conn *conn)
     }
 }
 
+static int ble_unpair(void)
+{
+    int ret = k_work_submit(&unpair_work);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to submit work for unpairing (err %d)", ret);
+        return ret;
+    }
+
+    return 0;
+}
+
+static int ble_enter_pairing_mode(void)
+{
+    int ret = k_work_submit(&pairing_mode_work);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to submit work for entering pairing mode (err %d)", ret);
+        return ret;
+    }
+
+    return 0;
+}
+
 //------------------------------------------------------------------------------
 
 static void exchange_func(struct bt_conn *conn, uint8_t att_err, struct bt_gatt_exchange_params *params)
@@ -304,8 +337,13 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
     update_data_length(my_conn);
     update_mtu(my_conn);
 
-    if (connection_state_callback)
-        connection_state_callback(true);
+    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_CHANGED, .ble_connected = true};
+
+    ret = zbus_chan_pub(&ui_control_chan, &event, K_MSEC(10));
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to publish BLE connection state change event (err %d)", ret);
+    }
 }
 
 static void on_disconnected(struct bt_conn *conn, uint8_t reason)
@@ -314,8 +352,13 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 
     bt_conn_unref(my_conn);
 
-    if (connection_state_callback)
-        connection_state_callback(false);
+    struct app_event event = {.type = APP_EVENT_BLE_CONNECTION_STATE_CHANGED, .ble_connected = false};
+
+    int ret = zbus_chan_pub(&ui_control_chan, &event, K_MSEC(10));
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to publish BLE disconnection state change event (err %d)", ret);
+    }
 }
 
 static void on_recycled(void)
@@ -406,20 +449,53 @@ static struct bt_conn_auth_cb conn_auth_callbacks =
 
 //------------------------------------------------------------------------------
 
-int ble_manager_init(struct ble_manager_cfg *cfg)
+static bool lbs_button_cb(void)
 {
-    if (!cfg)
-    {
-        LOG_ERR("Invalid configuration pointer");
-        return -1;
-    }
+	return lbs_button_state;
+}
 
+static void lbs_led_cb(const bool led_state)
+{
+	struct app_event event = {.type = APP_EVENT_LBS_LED_SET_REQ, .led_state = led_state};
+
+    int ret = zbus_chan_pub(&ui_control_chan, &event, K_MSEC(10));
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to publish BLE connection state change event (err %d)", ret);
+    }
+}
+
+static uint32_t sampling_interval_get_cb(void)
+{
+	// uint32_t sampling_interval_ms = 0;
+	// int ret = env_manager_sampling_interval_get(&sampling_interval_ms);
+	// if (ret < 0)
+	// {
+	// 	LOG_ERR("Failed to get sampling interval from Environment Manager (err %d)", ret);
+	// 	return 0;
+	// }
+
+	return sampling_interval_ms;
+}
+
+static void sampling_interval_set_cb(uint32_t sampling_interval_ms)
+{
+    struct app_event event = {.type = APP_EVENT_SAMPLING_INTERVAL_SET_REQ, .sampling_interval_ms = sampling_interval_ms};
+    int ret = zbus_chan_pub(&env_control_chan, &event, K_MSEC(10));
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to publish sampling interval update event (err %d)", ret);
+    }
+}
+
+//------------------------------------------------------------------------------
+
+int ble_manager_init(void)
+{
     k_work_init(&adv_work, adv_work_handler);
     k_work_init(&update_adv_data_work, update_adv_data_work_handler);
     k_work_init(&unpair_work, unpair_work_handler);
     k_work_init(&pairing_mode_work, pairing_mode_work_handler);
-
-    connection_state_callback = cfg->connection_state_cb;
 
     int ret = bt_conn_auth_cb_register(&conn_auth_callbacks);
     if (ret)
@@ -430,8 +506,8 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
 
     struct lb_service_cb lbs_callbacks = 
     {
-        .led_set_cb = cfg->led_set_cb,
-        .button_get_cb = cfg->button_get_cb,
+        .led_set_cb = lbs_led_cb,
+        .button_get_cb = lbs_button_cb,
     };
 
     ret = lb_service_init(&lbs_callbacks);
@@ -443,8 +519,8 @@ int ble_manager_init(struct ble_manager_cfg *cfg)
 
     struct thp_service_cb thp_callbacks = 
     {
-        .sampling_interval_get_cb = cfg->sampling_interval_get_cb,
-        .sampling_interval_set_cb = cfg->sampling_interval_set_cb,
+        .sampling_interval_get_cb = sampling_interval_get_cb,
+        .sampling_interval_set_cb = sampling_interval_set_cb,
     };
 
     ret = thp_service_init(&thp_callbacks);
@@ -489,28 +565,45 @@ int ble_manager_advertise_button_pressed(bool button_pressed)
     return ret;
 }
 
-int ble_manager_unpair(void)
+int ble_manager_process(void)
 {
-    int ret = k_work_submit(&unpair_work);
-    if (ret < 0)
+    const struct zbus_channel *chan;
+    struct app_event event;
+    
+    while (1)
     {
-        LOG_ERR("Failed to submit work for unpairing (err %d)", ret);
-        return ret;
+        int ret = zbus_sub_wait_msg(&ble_manager_sub, &chan, &event, K_MSEC(10));
+        if (ret == 0 && chan == &ble_control_chan)
+        {
+            switch (event.type)
+            {
+                case APP_EVENT_LBS_BUTTON_STATE_CHANGED:
+                    lbs_button_state = event.button_state;
+                    lb_service_send_button_state_indicate(event.button_state);
+                    break;
+                case APP_EVENT_BLE_PAIRING_MODE_REQ:
+                    ble_enter_pairing_mode();
+                    break;
+                case APP_EVENT_BLE_UNPAIR_REQ:
+                    ble_unpair();
+                    break;
+                case APP_EVENT_SAMPLING_INTERVAL_SET_REQ:
+                    sampling_interval_ms = (event.sampling_interval_ms);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        ret = k_msgq_get(&sensor_event_queue, &event, K_MSEC(10));
+        if (ret == 0 && event.type == APP_EVENT_SENSOR_DATA_UPDATE)
+        {
+            thp_service_send_sensor_notify(THP_SENSOR_TYPE_TEMP, event.sensor_data.temp_celsius_exp1);
+            thp_service_send_sensor_notify(THP_SENSOR_TYPE_HUMIDITY, event.sensor_data.humidity_percent_exp1); 
+            thp_service_send_sensor_notify(THP_SENSOR_TYPE_PRESSURE, event.sensor_data.pressure_hpa_exp1);
+        }
     }
-
-    return 0;
-}
-
-int ble_manager_enter_pairing_mode(void)
-{
-    int ret = k_work_submit(&pairing_mode_work);
-    if (ret < 0)
-    {
-        LOG_ERR("Failed to submit work for entering pairing mode (err %d)", ret);
-        return ret;
-    }
-
-    return 0;
 }
 
 //------------------------------------------------------------------------------

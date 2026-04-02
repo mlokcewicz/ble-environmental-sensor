@@ -13,6 +13,7 @@ BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52
 - Up to 2 paired devices handling, ability to reset bonded list and enter pairing mode
 - DFU over BLE and Serial Recovery in MCUboot (used as immutable bootloader)
 - External SPI NOR flash used for the MCUboot's secondary slot
+- Inter-thread communication architecture and application logic based on Zephyr Bus and Message Queues 
 
 ### System architecture
 

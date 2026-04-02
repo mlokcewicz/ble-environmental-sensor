@@ -7,6 +7,8 @@
 
 #include "ui_manager.h"
 
+#include <app_event.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
@@ -28,6 +30,8 @@
 
 LOG_MODULE_REGISTER(ui_manager);
 
+ZBUS_MSG_SUBSCRIBER_DEFINE(ui_manager_sub); 
+
 static const struct gpio_dt_spec ble_conn_led = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
 static const struct gpio_dt_spec lbs_led = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
 static const struct gpio_dt_spec lbs_sw = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
@@ -44,6 +48,8 @@ static bool button_state = false;
 
 void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
+	struct app_event event;
+
 	if (pins & BIT(lbs_sw.pin))
 	{
 		LOG_DBG("SW0 interrupt triggered");
@@ -51,7 +57,13 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		bool pressed = gpio_pin_get_dt(&lbs_sw);
 		button_state = pressed;
 
-		lb_service_send_button_state_indicate(pressed);
+		event.type = APP_EVENT_LBS_BUTTON_STATE_CHANGED;
+		event.button_state = pressed;
+		int ret = zbus_chan_pub(&ble_control_chan, &event, K_MSEC(10));
+		if (ret < 0)
+		{
+			LOG_ERR("Failed to publish LBS button state change event (err %d)", ret);
+		}
 	}	
 
 	if (pins & BIT(ble_unpair_sw.pin))
@@ -62,7 +74,13 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		if (pressed)
 		{
 			LOG_INF("Unpairing Bluetooth peer");
-			ble_manager_unpair();
+
+			event.type = APP_EVENT_BLE_UNPAIR_REQ;
+			int ret = zbus_chan_pub(&ble_control_chan, &event, K_MSEC(10));
+			if (ret < 0)			
+			{
+				LOG_ERR("Failed to publish BLE unpairing request event (err %d)", ret);
+			}
 		}
 	}
 
@@ -74,10 +92,24 @@ void pin_isr(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_
 		if (pressed)
 		{
 			LOG_INF("Entering pairing mode");
-			ble_manager_enter_pairing_mode();
-            blink_set_period_ms(pairing_blink_led, BLINK_PERIOD_MS_FAST);
+
+			blink_set_period_ms(pairing_blink_led, BLINK_PERIOD_MS_FAST);
+			event.type = APP_EVENT_BLE_PAIRING_MODE_REQ;
+			int ret = zbus_chan_pub(&ble_control_chan, &event, K_MSEC(10));
+			if (ret < 0)	
+			{
+				LOG_ERR("Failed to publish BLE pairing mode request event (err %d)", ret);
+			}
 		}
 	}
+}
+
+static void set_conn_state_led(bool connected)
+{
+	if (connected)
+		blink_set_period_ms(pairing_blink_led, BLINK_PERIOD_MS_SLOW);
+
+	gpio_pin_set_dt(&ble_conn_led, connected);
 }
 
 //------------------------------------------------------------------------------
@@ -170,18 +202,28 @@ int ui_manager_init(void)
 
 int ui_manager_process(void)
 {
+	const struct zbus_channel *chan;
+    struct app_event event;
+
     while (1)
     {
-        k_msleep(1000);
-    }
+		int ret = zbus_sub_wait_msg(&ui_manager_sub, &chan, &event, K_FOREVER);
+		if (ret != 0)
+			continue;
+
+		if (chan == &ui_control_chan)
+		{
+			switch (event.type)
+			{
+			case APP_EVENT_BLE_CONNECTION_STATE_CHANGED:
+				set_conn_state_led(event.ble_connected);
+				break;
+
+			default:
+				break;
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
-
-void remove_me_set_ui_conn(bool connected)
-{
-    if (connected)
-        blink_set_period_ms(pairing_blink_led, BLINK_PERIOD_MS_SLOW);
-
-    gpio_pin_set_dt(&ble_conn_led, connected);
-}

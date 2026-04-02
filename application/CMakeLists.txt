@@ -1,6 +1,7 @@
 # main app target
 
 target_sources(app PRIVATE main.c)
+target_sources(app PRIVATE app_event.c)
 target_sources(app PRIVATE ui_manager.c)
 target_sources(app PRIVATE env_manager.c)
 target_sources(app PRIVATE ble_manager.c)
