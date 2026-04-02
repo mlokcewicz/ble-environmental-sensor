@@ -61,11 +61,8 @@ static const struct bt_data ad[] =
 // Scan response data - maximum 31 bytes for legacy advertising
 static const struct bt_data sd[] = 
 {
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL, 
-        BT_UUID_LBS_VAL, // LBS UUID
-        // BT_UUID_THP_VAL,  // THP UUID
-        //  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL), // Battery Service UUID
-        ),
+    BT_DATA_BYTES(BT_DATA_UUID128_SOME, BT_UUID_LBS_VAL),   
+    BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(BT_UUID_BAS_VAL))
 };
 
 static struct bt_conn *my_conn = NULL;
@@ -468,14 +465,6 @@ static void lbs_led_cb(const bool led_state)
 
 static uint32_t sampling_interval_get_cb(void)
 {
-	// uint32_t sampling_interval_ms = 0;
-	// int ret = env_manager_sampling_interval_get(&sampling_interval_ms);
-	// if (ret < 0)
-	// {
-	// 	LOG_ERR("Failed to get sampling interval from Environment Manager (err %d)", ret);
-	// 	return 0;
-	// }
-
 	return sampling_interval_ms;
 }
 
