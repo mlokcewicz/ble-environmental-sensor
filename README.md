@@ -17,7 +17,7 @@ BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52
 
 ### System architecture
 
-
+![c4_level_2_diagram](docs/c4_level_2_container_diagram.png)
 
 ### BLE Services
 
