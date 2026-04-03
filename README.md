@@ -9,7 +9,7 @@ BLE environmental sensor (temperature, humidity, pressure) based on Nordic nRF52
 - Supply voltage measurement and sending via Battery Service
 - DFU over BLE enabled via SMP Service
 - Sampling interval configuration
-- Pairing with encryption and authentication and bonding with filer accept list handling
+- Pairing with encryption and authentication and bonding with filter accept list handling
 - Up to 2 paired devices handling, ability to reset bonded list and enter pairing mode
 - DFU over BLE and Serial Recovery in MCUboot (used as immutable bootloader)
 - External SPI NOR flash used for the MCUboot's secondary slot
